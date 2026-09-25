@@ -78,13 +78,13 @@ router.get("/pdf/:filename", authenticateRequest, async (req, res) => {
 });
 
 // Placeholder for future PowerPoint endpoint
-router.get("/ppt/:reportId", async (req, res) => {
+router.get("/ppt/:reportId", authenticateRequest, async (req, res) => {
     // You can fill this out when the PowerPoint generation service is ready
     res.status(501).json({ message: "PowerPoint download not implemented yet" });
 });
 
 // POST /reports/:reportId/generate-pdf
-router.post("/:reportId/generate-pdf", async (req, res) => {
+router.post("/:reportId/generate-pdf", authenticateRequest, async (req, res) => {
     const { reportId } = req.params;
     const token = req.headers.authorization;
     
