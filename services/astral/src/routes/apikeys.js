@@ -8,7 +8,7 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get all API keys (admin only) - returns keys without decrypted values
-router.get('/', authenticateRequest, authorizeRoles(['admin']), async (req, res) => {
+router.get('/', authenticateRequest, authorizeRoles('ADMIN'), async (req, res) => {
   try {
     const apiKeys = await prisma.apiKey.findMany({
       select: {
@@ -39,7 +39,7 @@ router.get('/', authenticateRequest, authorizeRoles(['admin']), async (req, res)
 });
 
 // Create new API key (admin only)
-router.post('/', authenticateRequest, authorizeRoles(['admin']), async (req, res) => {
+router.post('/', authenticateRequest, authorizeRoles('ADMIN'), async (req, res) => {
   try {
     const { name, service, key, value, expiresAt } = req.body;
     
@@ -77,7 +77,7 @@ router.post('/', authenticateRequest, authorizeRoles(['admin']), async (req, res
 });
 
 // Update API key (admin only)
-router.put('/:id', authenticateRequest, authorizeRoles(['admin']), async (req, res) => {
+router.put('/:id', authenticateRequest, authorizeRoles('ADMIN'), async (req, res) => {
   try {
     const { id } = req.params;
     const { name, key, value, expiresAt, isActive } = req.body;
@@ -110,7 +110,7 @@ router.put('/:id', authenticateRequest, authorizeRoles(['admin']), async (req, r
 });
 
 // Delete API key (admin only)
-router.delete('/:id', authenticateRequest, authorizeRoles(['admin']), async (req, res) => {
+router.delete('/:id', authenticateRequest, authorizeRoles('ADMIN'), async (req, res) => {
   try {
     const { id } = req.params;
 
