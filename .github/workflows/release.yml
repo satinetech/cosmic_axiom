@@ -1,0 +1,86 @@
+name: Release
+
+# A release is a tag. Pushing `vX.Y.Z` publishes a GitHub release whose notes are
+# the matching section of CHANGELOG.md.
+#
+# Reading the notes from the changelog rather than from the commit log is what
+# keeps the two in step: a tag with no section fails the workflow, so the
+# changelog cannot silently fall behind.
+on:
+  push:
+    tags:
+      - 'v*'
+  # Dry run. Checks that a version would release cleanly -- tag format, a
+  # matching changelog section, non-empty notes -- and creates nothing.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to check, e.g. v0.1.0. Nothing is published.'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve the version
+        id: v
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version='${{ inputs.version }}'
+            echo "dry_run=true" >> "$GITHUB_OUTPUT"
+          else
+            version="${GITHUB_REF_NAME}"
+            echo "dry_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Anchored, so `v1.2.3-wip` or `v1.2` is rejected rather than
+          # producing a release that sorts unpredictably against the others.
+          if ! printf '%s' "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::'$version' is not vMAJOR.MINOR.PATCH"
+            exit 1
+          fi
+
+          echo "version=$version"          >> "$GITHUB_OUTPUT"
+          echo "number=${version#v}"       >> "$GITHUB_OUTPUT"
+
+      - name: Take the release notes from CHANGELOG.md
+        id: notes
+        run: |
+          number='${{ steps.v.outputs.number }}'
+
+          # Everything between this version's heading and the next one. The
+          # dots are escaped first: unescaped they are regex wildcards, so
+          # 1.2.0 would also match a heading like [1x2x0].
+          awk -v want="$number" '
+            BEGIN { gsub(/\./, "\\.", want) }
+            $0 ~ "^## \\[" want "\\]" { inside = 1; next }
+            inside && /^## / { exit }
+            inside { print }
+          ' CHANGELOG.md > notes.md
+
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::CHANGELOG.md has no '## [$number]' section, or it is empty."
+            echo "::error::Add one before tagging: the release notes come from that section."
+            exit 1
+          fi
+
+          echo "--- notes for $number ---"
+          cat notes.md
+
+      - name: Publish
+        if: steps.v.outputs.dry_run == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.v.outputs.version }}" \
+            --title "${{ steps.v.outputs.version }}" \
+            --notes-file notes.md
+
+      - name: Dry run complete
+        if: steps.v.outputs.dry_run == 'true'
+        run: echo "Checks passed for ${{ steps.v.outputs.version }}. Nothing was published."
