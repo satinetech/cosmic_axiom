@@ -1,0 +1,338 @@
+# ============================================================================
+# Production compose
+# ============================================================================
+# Differs from docker-compose.local.yml, which starts only MySQL and expects the
+# seven services to be run by hand from a terminal each. This file runs the
+# whole system.
+#
+# Two properties it is built around:
+#
+#   Nothing starts before what it depends on is READY, not merely started.
+#   `depends_on` on its own waits for a container to exist, which is close to
+#   useless -- MySQL accepts TCP connections seconds before it will answer a
+#   query. Every edge here is `service_healthy` or `service_completed_
+#   successfully`, so the startup order is real.
+#
+#   Migrations run as their own one-shot containers, before the service that
+#   owns the schema. A service that migrates its own database on boot races
+#   itself as soon as there is more than one replica, and hides migration
+#   failures inside application logs.
+#
+# Usage:
+#     cp .env.example .env     # and fill in the passwords
+#     docker compose -f docker-compose.prod.yml up -d --build
+# ============================================================================
+
+name: cosmic-axiom
+
+# ---------------------------------------------------------------------------
+# Shared fragments
+# ---------------------------------------------------------------------------
+x-service-base: &service-base
+  restart: unless-stopped
+  networks: [internal]
+  environment: &common-env
+    NODE_ENV: production
+    TOKEN_EXPIRY: ${TOKEN_EXPIRY:-1h}
+
+x-migrate-base: &migrate-base
+  # A one-shot container: it runs `prisma migrate deploy`, exits, and the
+  # service that needs it waits for that exit to be a success.
+  restart: "no"
+  networks: [internal]
+  command: ["npx", "prisma", "migrate", "deploy"]
+  depends_on:
+    mysql:
+      condition: service_healthy
+
+services:
+
+  # -------------------------------------------------------------------------
+  # Database
+  # -------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    networks: [internal]
+    environment:
+      # No defaults. An unset password here would otherwise become a silent
+      # empty-string credential on a host holding client findings.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in infra/.env}
+      MYSQL_USER: ${MYSQL_USER:-microservice_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in infra/.env}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db-init-prod:/docker-entrypoint-initdb.d:ro
+    # Deliberately NOT published. Nothing outside this network needs to reach
+    # the database, and publishing 3306 on a host that holds engagement data is
+    # a needless invitation.
+    healthcheck:
+      # --silent so a failing ping does not fill the log with output that looks
+      # like an error when it is just a not-ready-yet.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # -------------------------------------------------------------------------
+  # JWT signing keys
+  # -------------------------------------------------------------------------
+  keygen:
+    # astral's own image, purely so this needs no extra image and no network:
+    # the keypair is generated with Node's crypto, not by shelling out to
+    # openssl, which node:20-slim does not ship.
+    # As with the migration jobs: no build stanza, the astral service owns it.
+    image: cosmic-axiom/astral:${TAG:-latest}
+    networks: [internal]
+    restart: "no"
+    # Root, because a named volume is created owned by root and the service
+    # containers run unprivileged. The keys are chowned to the `node` uid
+    # afterwards, and the private key is never group- or world-readable.
+    user: root
+    volumes:
+      - jwt_keys:/keys
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        node -e '
+          const fs = require("fs");
+          const { generateKeyPairSync } = require("crypto");
+          if (fs.existsSync("/keys/private.key")) {
+            console.log("keygen: existing keypair kept");
+            process.exit(0);
+          }
+          const { privateKey, publicKey } = generateKeyPairSync("rsa", {
+            modulusLength: 2048,
+            privateKeyEncoding: { type: "pkcs8", format: "pem" },
+            publicKeyEncoding: { type: "spki", format: "pem" },
+          });
+          fs.writeFileSync("/keys/private.key", privateKey, { mode: 0o600 });
+          fs.writeFileSync("/keys/public.key.pub", publicKey, { mode: 0o644 });
+          console.log("keygen: generated a new RSA keypair");
+        '
+        chown -R 1000:1000 /keys
+
+  # -------------------------------------------------------------------------
+  # Migrations, one per service that owns a schema
+  # -------------------------------------------------------------------------
+  astral-migrate:
+    <<: *migrate-base
+    # No `build:` here on purpose. This is the same image as the `astral`
+    # service below, and two service definitions building one tag makes
+    # `up --build` race itself -- it fails with "image ... already exists".
+    # Compose builds everything that declares a build before it creates any
+    # container, so by the time this job starts the image is present locally.
+    image: cosmic-axiom/astral:${TAG:-latest}
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-microservice_user}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD in infra/.env}@mysql:3306/astral
+
+  forge-migrate:
+    <<: *migrate-base
+    # No `build:` here on purpose. This is the same image as the `forge`
+    # service below, and two service definitions building one tag makes
+    # `up --build` race itself -- it fails with "image ... already exists".
+    # Compose builds everything that declares a build before it creates any
+    # container, so by the time this job starts the image is present locally.
+    image: cosmic-axiom/forge:${TAG:-latest}
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-microservice_user}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD in infra/.env}@mysql:3306/forge
+
+  library-migrate:
+    <<: *migrate-base
+    # No `build:` here on purpose. This is the same image as the `library`
+    # service below, and two service definitions building one tag makes
+    # `up --build` race itself -- it fails with "image ... already exists".
+    # Compose builds everything that declares a build before it creates any
+    # container, so by the time this job starts the image is present locally.
+    image: cosmic-axiom/library:${TAG:-latest}
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-microservice_user}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD in infra/.env}@mysql:3306/library
+
+  singularity-migrate:
+    <<: *migrate-base
+    # No `build:` here on purpose. This is the same image as the `singularity`
+    # service below, and two service definitions building one tag makes
+    # `up --build` race itself -- it fails with "image ... already exists".
+    # Compose builds everything that declares a build before it creates any
+    # container, so by the time this job starts the image is present locally.
+    image: cosmic-axiom/singularity:${TAG:-latest}
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-microservice_user}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD in infra/.env}@mysql:3306/singularity
+
+  # -------------------------------------------------------------------------
+  # Services
+  # -------------------------------------------------------------------------
+
+  # astral is the root of the authentication graph: it holds the signing keys
+  # and every other service verifies tokens by asking it. Nothing it depends on
+  # depends on it.
+  astral:
+    <<: *service-base
+    image: cosmic-axiom/astral:${TAG:-latest}
+    build:
+      context: ../services/astral
+    environment:
+      <<: *common-env
+      PORT: 3001
+      DATABASE_URL: mysql://${MYSQL_USER:-microservice_user}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD in infra/.env}@mysql:3306/astral
+      # Without this astral generates a random key at startup, and every API key
+      # encrypted by the previous run becomes permanently undecryptable.
+      API_KEY_ENCRYPTION_KEY: ${API_KEY_ENCRYPTION_KEY:?set API_KEY_ENCRYPTION_KEY in infra/.env}
+    volumes:
+      - jwt_keys:/app/src/keys:ro
+    depends_on:
+      astral-migrate:
+        condition: service_completed_successfully
+      keygen:
+        condition: service_completed_successfully
+
+  forge:
+    <<: *service-base
+    image: cosmic-axiom/forge:${TAG:-latest}
+    build:
+      context: ../services/forge
+    environment:
+      <<: *common-env
+      PORT: 3002
+      DATABASE_URL: mysql://${MYSQL_USER:-microservice_user}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD in infra/.env}@mysql:3306/forge
+      ASTRAL_URL: http://astral:3001
+    depends_on:
+      forge-migrate:
+        condition: service_completed_successfully
+      astral:
+        condition: service_healthy
+
+  library:
+    <<: *service-base
+    image: cosmic-axiom/library:${TAG:-latest}
+    build:
+      context: ../services/library
+    environment:
+      <<: *common-env
+      PORT: 3003
+      DATABASE_URL: mysql://${MYSQL_USER:-microservice_user}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD in infra/.env}@mysql:3306/library
+      ASTRAL_URL: http://astral:3001
+    depends_on:
+      library-migrate:
+        condition: service_completed_successfully
+      astral:
+        condition: service_healthy
+
+  singularity:
+    <<: *service-base
+    image: cosmic-axiom/singularity:${TAG:-latest}
+    build:
+      context: ../services/singularity
+    environment:
+      <<: *common-env
+      PORT: 3004
+      DATABASE_URL: mysql://${MYSQL_USER:-microservice_user}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD in infra/.env}@mysql:3306/singularity
+      ASTRAL_URL: http://astral:3001
+      HORIZON_URL: http://horizon:3006
+    depends_on:
+      singularity-migrate:
+        condition: service_completed_successfully
+      astral:
+        condition: service_healthy
+
+  horizon:
+    <<: *service-base
+    image: cosmic-axiom/horizon:${TAG:-latest}
+    build:
+      context: ../services/horizon
+    environment:
+      <<: *common-env
+      PORT: 3006
+      ASTRAL_URL: http://astral:3001
+    volumes:
+      # Rendered PDFs. A named volume rather than the container filesystem, so a
+      # report survives the image being rebuilt underneath it.
+      - horizon_generated:/app/generated
+    depends_on:
+      astral:
+        condition: service_healthy
+
+  nebula:
+    <<: *service-base
+    image: cosmic-axiom/nebula:${TAG:-latest}
+    build:
+      context: ../services/nebula
+    environment:
+      <<: *common-env
+      PORT: 3007
+      ASTRAL_URL: http://astral:3001
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_MAX_TOKENS: ${AI_MAX_TOKENS:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-}
+    volumes:
+      # nebula verifies tokens locally against a public key rather than calling
+      # astral, so it needs the SAME keypair astral signs with. See the note in
+      # .env.example.
+      - jwt_keys:/app/src/keys:ro
+    depends_on:
+      keygen:
+        condition: service_completed_successfully
+      astral:
+        condition: service_healthy
+
+  satellite:
+    <<: *service-base
+    image: cosmic-axiom/satellite:${TAG:-latest}
+    build:
+      context: ../services/satellite
+    environment:
+      <<: *common-env
+      PORT: 3005
+      ASTRAL_URL: http://astral:3001
+      FORGE_URL: http://forge:3002
+      LIBRARY_URL: http://library:3003
+      SINGULARITY_URL: http://singularity:3004
+      HORIZON_URL: http://horizon:3006
+      NEBULA_URL: http://nebula:3007
+    ports:
+      # Loopback only. The browser talks to satellite directly for now; a
+      # reverse proxy putting this and the frontend behind one origin is a
+      # separate change.
+      - "127.0.0.1:${SATELLITE_PORT:-3005}:3005"
+    depends_on:
+      astral:
+        condition: service_healthy
+      forge:
+        condition: service_healthy
+      library:
+        condition: service_healthy
+      singularity:
+        condition: service_healthy
+      horizon:
+        condition: service_healthy
+      nebula:
+        condition: service_healthy
+
+  frontend:
+    restart: unless-stopped
+    networks: [internal]
+    image: cosmic-axiom/frontend:${TAG:-latest}
+    build:
+      context: ../frontend
+      args:
+        # Baked into the bundle at build time -- Vite inlines it, there is no
+        # runtime lookup -- so changing this needs a rebuild, not a restart.
+        VITE_SATELLITE_URL: ${VITE_SATELLITE_URL:-http://localhost:3005}
+    ports:
+      - "127.0.0.1:${HTTP_PORT:-8080}:8080"
+    depends_on:
+      satellite:
+        condition: service_healthy
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  jwt_keys:
+  horizon_generated:
