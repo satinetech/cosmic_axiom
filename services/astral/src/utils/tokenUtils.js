@@ -9,7 +9,11 @@ dotenv.config();
 
 
 const prisma = new PrismaClient();
-const TOKEN_EXPIRY = process.env.TOKEN_EXPIRY
+// Defaulted, because jwt.sign throws on an undefined expiresIn -- and
+// TOKEN_EXPIRY appears nowhere in .env.example or in infra/standup.sh, so on a
+// stock install it IS undefined. The failure lands inside sign(), so a correct
+// username and password returns 500 rather than a token.
+const TOKEN_EXPIRY = process.env.TOKEN_EXPIRY || '1h'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
