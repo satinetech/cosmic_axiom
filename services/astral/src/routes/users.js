@@ -118,9 +118,33 @@ router.post('/update', authenticateRequest, async (req, res) => {
     }
 
     try {
+        const isAdmin = req.tokenPayload.role === 'ADMIN';
+        const isSelf = req.tokenPayload.sub === id;
+
         // Only allow ADMINs to change other users
-        if (req.tokenPayload.role !== 'ADMIN' && req.tokenPayload.sub !== id) {
+        if (!isAdmin && !isSelf) {
             return res.status(403).json({ error: 'Forbidden: Admins only for this action' });
+        }
+
+        // Editing your own profile and editing your own privileges are two
+        // different things, and this endpoint accepts them in one request body.
+        // Without this check the self-update path grants any authenticated user
+        // whatever role they ask for, because `role` is taken from the body and
+        // written straight to the row.
+        //
+        // Read the stored role rather than trusting the token's copy of it: the
+        // token was signed at login and may predate a legitimate change.
+        const target = await prisma.user.findUnique({
+            where: { id },
+            select: { role: true },
+        });
+
+        if (!target) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (!isAdmin && role !== target.role) {
+            return res.status(403).json({ error: 'Forbidden: only an ADMIN can change a role' });
         }
 
         const updatedUser = await prisma.user.update({
