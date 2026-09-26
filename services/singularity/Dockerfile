@@ -11,6 +11,20 @@
 FROM node:20-slim AS build
 WORKDIR /app
 
+# Prisma's query engine links against libssl and probes the system OpenSSL to
+# pick which engine build to load. node:20-slim ships libssl but not the
+# `openssl` package, so that probe fails and Prisma falls back to an
+# openssl-1.1.x engine with a warning on every invocation:
+#
+#   prisma:warn Prisma failed to detect the libssl/openssl version to use
+#
+# ca-certificates comes along because anything this image talks to over TLS
+# needs a trust store, and slim does not have one.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        openssl \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 # Dependency manifests first, so editing source does not reinstall the world.
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -24,6 +38,20 @@ RUN npx prisma generate
 FROM node:20-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
+
+# Prisma's query engine links against libssl and probes the system OpenSSL to
+# pick which engine build to load. node:20-slim ships libssl but not the
+# `openssl` package, so that probe fails and Prisma falls back to an
+# openssl-1.1.x engine with a warning on every invocation:
+#
+#   prisma:warn Prisma failed to detect the libssl/openssl version to use
+#
+# ca-certificates comes along because anything this image talks to over TLS
+# needs a trust store, and slim does not have one.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        openssl \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Source first, then node_modules -- deliberately in that order. .dockerignore
 # excludes node_modules from the context, but if that ever stops being true, a
