@@ -170,6 +170,17 @@ done
 
 echo -e "${GREEN}✓ All databases seeded${RESET}\n"
 
+# Create the first account.
+#
+# This replaces the administrator that seed_astral.sql used to INSERT with a
+# fixed password. The password is generated here and printed once; it is
+# different on every deployment and is not stored anywhere.
+echo -e "${BOLD}Creating the first account...${RESET}"
+pushd "../services/astral" > /dev/null
+SEED_DEFAULT_ADMIN=true npm run --silent seed
+popd > /dev/null
+echo ""
+
 # Final summary
 echo -e "${BOLD}${GREEN}╔════════════════════════════════════════════════════════════╗${RESET}"
 echo -e "${BOLD}${GREEN}║                    Setup Complete! 🎉                      ║${RESET}"
@@ -179,9 +190,8 @@ echo -e "${BOLD}Next steps:${RESET}"
 echo -e "  1. ${YELLOW}cd ..${RESET} (go to project root)"
 echo -e "  2. ${YELLOW}./start.sh${RESET} (start all services)"
 echo ""
-echo -e "${BOLD}Default credentials:${RESET}"
-echo -e "  Admin: ${YELLOW}admin@cosmic.com${RESET} / ${YELLOW}admin123${RESET}"
-echo -e "  User:  ${YELLOW}user@cosmic.com${RESET} / ${YELLOW}user123${RESET}"
+echo -e "${BOLD}Signing in:${RESET}"
+echo -e "  The administrator password was printed above, once. It is not stored anywhere."
 echo ""
 echo -e "${BOLD}${YELLOW}Note:${RESET} Remember to update the ${YELLOW}CLAUDE_API_KEY${RESET} in ${YELLOW}services/nebula/.env${RESET}"
 echo -e "      if you want to use AI features."
