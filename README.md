@@ -127,7 +127,27 @@ cd ..
 
 ### Access the Application
 - **Web Interface**: http://localhost:5173
-- **Default Admin**: `admin@cosmic.com` / `admin123`
+- **Administrator account**: created by `./infra/standup.sh`, which prints a
+  generated password **once** as it finishes. It is different on every
+  deployment and is not stored anywhere, so copy it before closing the terminal.
+
+#### Creating the first account
+
+`standup.sh` does this for you. To create accounts later, or to add a team, run
+the seeder in `services/astral`:
+
+```bash
+# One administrator, with a generated password shown once
+SEED_DEFAULT_ADMIN=true npm run seed
+
+# Or a list, as 'username:ROLE' -- ADMIN, PENTESTER or 'PENTEST LEAD'
+SEED_USERS="alice:ADMIN, bob:PENTESTER" npm run seed
+```
+
+It never modifies an account that already exists, so it is safe to re-run and
+will not silently reset anyone's password. Supply `SEED_DEFAULT_ADMIN_PASSWORD`
+to choose the password instead of having one generated; a supplied password is
+not echoed.
 
 ---
 
@@ -259,7 +279,7 @@ MySQL runs in Docker with the following default settings:
 
 ### Creating Your First Report
 
-1. **Login** to the application using the default credentials
+1. **Login** to the application with the account `standup.sh` created
 2. **Create a Customer** in the Customers section
 3. **Set up an Engagement** with testing scope and timeline
 4. **Generate a Report** from the Reports section

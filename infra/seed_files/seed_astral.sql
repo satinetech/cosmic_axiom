@@ -1,11 +1,10 @@
--- Insert an admin user
-INSERT IGNORE INTO User (id, username, name, role, passwordHash, createdAt, lastLogin)
-VALUES (
-    'a0000000-0000-0000-0000-000000000001',
-    'admin',
-    'Administrator',
-    'ADMIN',
-    '$2b$10$DOHpMMZVyKtrfpBG2Qjrau6D0cWpy97/iCOvMOQIZTHyyHxO1bqPm', -- 'admin123'
-    NOW(),
-    NOW()
-);
+-- Demo data for astral.
+--
+-- The administrator account is NOT created here any more. It used to be an
+-- INSERT of a bcrypt hash of 'admin123', with the plaintext in a comment beside
+-- it and the same credential published in the README -- identical on every
+-- deployment that ever ran this file, on hosts that hold client findings.
+--
+-- Accounts now come from `npm run seed` in services/astral, which creates only
+-- what the configuration asks for and prints a generated password once. See
+-- README.md, "Creating the first account".
