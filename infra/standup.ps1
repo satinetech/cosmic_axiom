@@ -229,6 +229,16 @@ foreach ($db in $MICROSERVICES) {
 Write-Host "✓ All databases seeded" -ForegroundColor Green
 Write-Host ""
 
+# Create the first account. Replaces the administrator that seed_astral.sql used
+# to INSERT with a fixed password; this one is generated and printed once.
+Write-Host "Creating the first account..." -ForegroundColor White
+Push-Location "..\services\astral"
+$env:SEED_DEFAULT_ADMIN = "true"
+npm run --silent seed
+Remove-Item Env:\SEED_DEFAULT_ADMIN
+Pop-Location
+Write-Host ""
+
 # Final summary
 Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor Green
 Write-Host "║                    Setup Complete! 🎉                      ║" -ForegroundColor Green
@@ -238,9 +248,8 @@ Write-Host "Next steps:" -ForegroundColor White
 Write-Host "  1. cd .. (go to project root)" -ForegroundColor Yellow
 Write-Host "  2. .\start.ps1 (start all services)" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "Default credentials:" -ForegroundColor White
-Write-Host "  Admin: admin@cosmic.com / admin123" -ForegroundColor Yellow
-Write-Host "  User:  user@cosmic.com / user123" -ForegroundColor Yellow
+Write-Host "The administrator password was printed above, once." -ForegroundColor White
+Write-Host "It is not stored anywhere -- copy it before closing this window." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Note: Remember to update the CLAUDE_API_KEY in services\nebula\.env" -ForegroundColor Yellow
 Write-Host "      if you want to use AI features." -ForegroundColor Gray
