@@ -9,6 +9,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  PENTESTER
+  // A Prisma enum member cannot contain a space, so this one is mapped onto the
+  // stored value rather than the stored value being rewritten. Two things fall
+  // out of that, both verified rather than assumed: existing rows stay
+  // byte-identical, so a rollback to the previous String column needs no second
+  // migration; and the client still reads and writes the string "PENTEST LEAD",
+  // so the API contract and the frontend's role list are unchanged.
+  PENTEST_LEAD @map("PENTEST LEAD")
+}
+
 model Token {
   id         String   @id @default(uuid())
   jti        String   @unique // <-- Add this to support lookup/revocation by jti
@@ -23,7 +35,7 @@ model User {
   id           String   @id @default(uuid())
   username     String   @unique
   name         String
-  role         String
+  role         Role
   passwordHash String
   createdAt    DateTime @default(now())
   lastLogin    DateTime?
