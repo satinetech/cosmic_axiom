@@ -293,11 +293,6 @@ services:
       SINGULARITY_URL: http://singularity:3004
       HORIZON_URL: http://horizon:3006
       NEBULA_URL: http://nebula:3007
-    ports:
-      # Loopback only. The browser talks to satellite directly for now; a
-      # reverse proxy putting this and the frontend behind one origin is a
-      # separate change.
-      - "127.0.0.1:${SATELLITE_PORT:-3005}:3005"
     depends_on:
       astral:
         condition: service_healthy
@@ -321,10 +316,42 @@ services:
       args:
         # Baked into the bundle at build time -- Vite inlines it, there is no
         # runtime lookup -- so changing this needs a rebuild, not a restart.
-        VITE_SATELLITE_URL: ${VITE_SATELLITE_URL:-http://localhost:3005}
-    ports:
-      - "127.0.0.1:${HTTP_PORT:-8080}:8080"
+        #
+        # A relative path, because the edge proxy serves the application and the
+        # API from one origin. The browser never learns a hostname for the API,
+        # so this image is not tied to the address it gets deployed behind.
+        VITE_SATELLITE_URL: ${VITE_SATELLITE_URL:-/api}
     depends_on:
+      satellite:
+        condition: service_healthy
+
+  # -------------------------------------------------------------------------
+  # Edge
+  # -------------------------------------------------------------------------
+  # The only published port in this file. Everything else talks over the
+  # internal network, which is what makes the identity-header handling in
+  # nginx/default.conf meaningful: if satellite were also reachable directly,
+  # clearing headers at this proxy would accomplish nothing.
+  nginx:
+    image: nginxinc/nginx-unprivileged:alpine
+    restart: unless-stopped
+    networks: [internal]
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      # 127.0.0.1, not 0.0.0.0. Terminate TLS in something in front of this --
+      # Tailscale Serve, a load balancer, a host nginx -- rather than exposing
+      # it directly.
+      - "127.0.0.1:${HTTP_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+    depends_on:
+      frontend:
+        condition: service_healthy
       satellite:
         condition: service_healthy
 
