@@ -1,0 +1,30 @@
+# The build installs its own dependencies. A host node_modules is the wrong
+# platform as often as not -- a Prisma engine or a native canvas build from a
+# developer's laptop will not run in the image.
+node_modules
+npm-debug.log*
+
+# Secrets. standup.sh writes real RSA signing keys and a .env into each service
+# directory; neither belongs in an image layer, where it would survive every
+# later copy of that image.
+#
+# The patterns are **/-prefixed on purpose. A bare `keys/` matches only the
+# context root, and standup.sh writes the keys to `src/keys/` -- so the
+# unprefixed form silently ships a 2048-bit RSA signing key inside the image.
+# Verified by planting one and inspecting the built image.
+**/.env
+**/.env.*
+!**/.env.example
+**/keys/
+
+# Runtime output, not input.
+generated/
+*.log
+
+# Not needed to run the service.
+test/
+.git
+.gitignore
+Dockerfile
+.dockerignore
+README.md
