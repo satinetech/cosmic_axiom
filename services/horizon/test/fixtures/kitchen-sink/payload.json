@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-03-01T12:00:00.000Z",
+  "report": {
+    "id": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+    "title": "Kitchen Sink Web Application Assessment",
+    "classification": "CONFIDENTIAL",
+    "version": "1.0",
+    "createdAt": "2026-02-02T09:00:00.000Z",
+    "updatedAt": "2026-02-10T17:45:12.000Z",
+    "executiveSummary": "Example Corp engaged the testing team to assess **app.example.com**.\n\nFour issues were found; one is critical.",
+    "methodology": "Testing followed the OWASP Web Security Testing Guide.",
+    "toolsAndTechniques": "- Burp Suite Professional\n- sqlmap\n- testssl.sh",
+    "conclusion": null
+  },
+  "engagement": {
+    "id": "9b1f2c44-1d2e-4f3a-8b5c-00000000ks01",
+    "name": "Example Corp Web App 2026",
+    "type": "WEB_APP_PENTEST",
+    "methodology": "GRAY_BOX",
+    "status": "ACTIVE",
+    "startDate": "2026-02-01T00:00:00.000Z",
+    "endDate": "2026-02-14T00:00:00.000Z",
+    "organization": "Cosmic Axiom Security",
+    "customer": {
+      "name": "Example Corp",
+      "contact": {
+        "name": "Dana Reyes",
+        "title": "Primary Contact",
+        "email": "dana.reyes@example.com",
+        "phone": "+1 555 0100"
+      }
+    },
+    "scope": [
+      {
+        "address": "app.example.com",
+        "description": "Customer portal",
+        "notes": null,
+        "inScope": true,
+        "assetType": "WEB_APPLICATION",
+        "environment": "PRODUCTION",
+        "criticality": "CRITICAL"
+      },
+      {
+        "address": "10.0.4.0/24",
+        "description": null,
+        "notes": "Application tier",
+        "inScope": true,
+        "assetType": "NETWORK",
+        "environment": "PRODUCTION",
+        "criticality": "HIGH"
+      },
+      {
+        "address": "payments.example.com",
+        "description": "Third-party processor",
+        "notes": "Explicitly excluded",
+        "inScope": false,
+        "assetType": "WEB_APPLICATION",
+        "environment": "PRODUCTION",
+        "criticality": "CRITICAL"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "type": "CUSTOM",
+      "title": null,
+      "content": "This section has a blank title."
+    },
+    {
+      "type": "FINDING",
+      "findingId": "f0000000-0000-4000-8000-000000000001"
+    },
+    {
+      "type": "FINDING",
+      "findingId": "f0000000-0000-4000-8000-000000000002"
+    },
+    {
+      "type": "CONNECTIVITY",
+      "title": "Connectivity: VPN",
+      "content": "Testing originated from 203.0.113.10 over the client VPN."
+    },
+    {
+      "type": "FINDING",
+      "findingId": "f0000000-0000-4000-8000-000000000003"
+    },
+    {
+      "type": "FINDING",
+      "findingId": "f0000000-0000-4000-8000-000000000004"
+    },
+    {
+      "type": "CUSTOM",
+      "title": "Closing Notes",
+      "content": "Retesting is included for 30 days."
+    }
+  ],
+  "findings": [
+    {
+      "id": "f0000000-0000-4000-8000-000000000001",
+      "title": "SQL injection in /api/search?q=",
+      "severity": "CRITICAL",
+      "description": "The `q` parameter is concatenated into a SQL query.\n\nAn unauthenticated attacker can read any table, including `users.password_hash`.",
+      "impact": "Full read access to the application database.",
+      "recommendation": "Use parameterised queries.\n\n1. Replace string concatenation in `SearchRepository`.\n2. Add a regression test.",
+      "references": [
+        "https://owasp.org/Top10/A03_2021-Injection/"
+      ],
+      "tags": [
+        "injection",
+        "OWASP A03"
+      ],
+      "affectedSystems": [
+        "app.example.com",
+        "10.0.4.12"
+      ],
+      "images": [
+        {
+          "id": "i0000000-0000-4000-8000-000000000001",
+          "title": "Payload response",
+          "caption": "Database version returned in the search results.",
+          "path": "images/i0000000-0000-4000-8000-000000000001.png"
+        },
+        {
+          "id": "i0000000-0000-4000-8000-000000000002",
+          "title": "Extracted hashes",
+          "caption": null,
+          "path": "images/i0000000-0000-4000-8000-000000000002.gif"
+        }
+      ]
+    },
+    {
+      "id": "f0000000-0000-4000-8000-000000000002",
+      "title": "Reflected XSS in #search <script>alert(1)</script>",
+      "severity": "HIGH",
+      "description": "Characters that are special to markup and template languages must survive as text: # $ @ * _ ` < > & \" ' \\ { } [ ].",
+      "impact": "Session theft for any user who follows a crafted link.",
+      "recommendation": "Encode output by context.",
+      "references": [],
+      "tags": [
+        "xss",
+        "OWASP A03"
+      ],
+      "affectedSystems": [
+        "app.example.com"
+      ],
+      "images": []
+    },
+    {
+      "id": "f0000000-0000-4000-8000-000000000003",
+      "title": "Weak TLS configuration — Ünïcödé 测试 ✓",
+      "severity": "MEDIUM",
+      "description": "TLS 1.0 and 1.1 are enabled.",
+      "impact": "Downgrade attacks.",
+      "recommendation": "Disable TLS < 1.2.",
+      "references": [],
+      "tags": [],
+      "affectedSystems": [
+        "mail.example.com:443"
+      ],
+      "images": []
+    },
+    {
+      "id": "f0000000-0000-4000-8000-000000000004",
+      "title": "Verbose server banner",
+      "severity": "LOW",
+      "description": "The `Server` header discloses the exact version.",
+      "impact": "Aids reconnaissance.",
+      "recommendation": "Suppress version information.",
+      "references": [],
+      "tags": [],
+      "affectedSystems": [],
+      "images": []
+    }
+  ]
+}
