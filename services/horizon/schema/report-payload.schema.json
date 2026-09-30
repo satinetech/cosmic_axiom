@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/millionsofeagles/cosmic_axiom/services/horizon/schema/report-payload.schema.json",
   "title": "Report payload",
-  "description": "Renderer-neutral report data produced by buildPayload(). Dates are ISO 8601 UTC; enums keep their database spelling; nothing is pre-formatted.",
+  "description": "Renderer-neutral report data produced by buildPayload(). Dates are ISO 8601 UTC; enums keep their database spelling; operator prose is a closed block/inline tree; nothing is pre-formatted.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "generatedAt", "report", "engagement", "sections", "findings"],
@@ -160,8 +160,127 @@
       "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1 }]
     },
     "text": {
-      "description": "Operator-written prose, as entered.",
-      "$ref": "#/$defs/optionalString"
+      "description": "Operator-written Markdown as a closed block tree (see src/payload/markdown.js), or null when blank.",
+      "oneOf": [{ "type": "null" }, { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/block" } }]
+    },
+    "blocks": { "type": "array", "items": { "$ref": "#/$defs/block" } },
+    "inlines": { "type": "array", "items": { "$ref": "#/$defs/inline" } },
+    "block": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "children"],
+          "properties": {
+            "type": { "const": "paragraph" },
+            "children": { "$ref": "#/$defs/inlines" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "level", "children"],
+          "properties": {
+            "type": { "const": "heading" },
+            "level": { "type": "integer", "minimum": 1, "maximum": 6 },
+            "children": { "$ref": "#/$defs/inlines" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "ordered", "start", "items"],
+          "properties": {
+            "type": { "const": "list" },
+            "ordered": { "type": "boolean" },
+            "start": { "description": "First number of an ordered list; null when unordered.", "oneOf": [{ "type": "null" }, { "type": "integer", "minimum": 0 }] },
+            "items": { "type": "array", "items": { "$ref": "#/$defs/blocks" } }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "lang", "text"],
+          "properties": {
+            "type": { "const": "codeBlock" },
+            "lang": { "$ref": "#/$defs/optionalString" },
+            "text": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "children"],
+          "properties": {
+            "type": { "const": "quote" },
+            "children": { "$ref": "#/$defs/blocks" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "align", "header", "rows"],
+          "properties": {
+            "type": { "const": "table" },
+            "align": { "type": "array", "items": { "enum": ["left", "center", "right", null] } },
+            "header": { "type": "array", "items": { "$ref": "#/$defs/inlines" } },
+            "rows": { "type": "array", "items": { "type": "array", "items": { "$ref": "#/$defs/inlines" } } }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "const": "rule" } }
+        }
+      ]
+    },
+    "inline": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "text"],
+          "properties": {
+            "type": { "const": "text" },
+            "text": { "type": "string", "minLength": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "children"],
+          "properties": {
+            "type": { "enum": ["strong", "emphasis", "strike"] },
+            "children": { "$ref": "#/$defs/inlines" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "text"],
+          "properties": {
+            "type": { "const": "code" },
+            "text": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "url", "children"],
+          "properties": {
+            "type": { "const": "link" },
+            "url": { "type": "string", "pattern": "^(?:[Hh][Tt][Tt][Pp][Ss]?:|[Mm][Aa][Ii][Ll][Tt][Oo]:)" },
+            "children": { "$ref": "#/$defs/inlines" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "const": "break" } }
+        }
+      ]
     },
     "stringList": {
       "type": "array",
