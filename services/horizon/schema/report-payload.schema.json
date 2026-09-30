@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/millionsofeagles/cosmic_axiom/services/horizon/schema/report-payload.schema.json",
+  "title": "Report payload",
+  "description": "Renderer-neutral report data produced by buildPayload(). Dates are ISO 8601 UTC; enums keep their database spelling; nothing is pre-formatted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "generatedAt", "report", "engagement", "sections", "findings"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "generatedAt": { "$ref": "#/$defs/timestamp" },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "classification", "version", "createdAt", "updatedAt", "executiveSummary", "methodology", "toolsAndTechniques", "conclusion"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "classification": { "type": "string" },
+        "version": { "type": "string" },
+        "createdAt": { "$ref": "#/$defs/optionalTimestamp" },
+        "updatedAt": { "$ref": "#/$defs/optionalTimestamp" },
+        "executiveSummary": { "$ref": "#/$defs/text" },
+        "methodology": { "$ref": "#/$defs/text" },
+        "toolsAndTechniques": { "$ref": "#/$defs/text" },
+        "conclusion": { "$ref": "#/$defs/text" }
+      }
+    },
+    "engagement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "type", "methodology", "status", "startDate", "endDate", "organization", "customer", "scope"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "$ref": "#/$defs/optionalString", "description": "Engagement type enum, e.g. WEB_APP_PENTEST." },
+        "methodology": { "$ref": "#/$defs/optionalString", "description": "Testing methodology enum, e.g. BLACK_BOX." },
+        "status": { "$ref": "#/$defs/optionalString" },
+        "startDate": { "$ref": "#/$defs/optionalTimestamp" },
+        "endDate": { "$ref": "#/$defs/optionalTimestamp" },
+        "organization": { "$ref": "#/$defs/optionalString", "description": "The testing organization." },
+        "customer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "contact"],
+          "properties": {
+            "name": { "$ref": "#/$defs/optionalString" },
+            "contact": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "title", "email", "phone"],
+                  "properties": {
+                    "name": { "$ref": "#/$defs/optionalString" },
+                    "title": { "$ref": "#/$defs/optionalString" },
+                    "email": { "$ref": "#/$defs/optionalString" },
+                    "phone": { "$ref": "#/$defs/optionalString" }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "scope": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["address", "description", "notes", "inScope", "assetType", "environment", "criticality"],
+            "properties": {
+              "address": { "type": "string" },
+              "description": { "$ref": "#/$defs/optionalString" },
+              "notes": { "$ref": "#/$defs/optionalString" },
+              "inScope": { "type": "boolean" },
+              "assetType": { "$ref": "#/$defs/optionalString" },
+              "environment": { "$ref": "#/$defs/optionalString" },
+              "criticality": { "$ref": "#/$defs/optionalString" }
+            }
+          }
+        }
+      }
+    },
+    "sections": {
+      "description": "The report body in reading order. Finding sections refer to an entry in `findings`.",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "findingId"],
+            "properties": {
+              "type": { "const": "FINDING" },
+              "findingId": { "type": "string" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "title", "content"],
+            "properties": {
+              "type": { "enum": ["CONNECTIVITY", "CUSTOM"] },
+              "title": { "$ref": "#/$defs/optionalString" },
+              "content": { "$ref": "#/$defs/text" }
+            }
+          }
+        ]
+      }
+    },
+    "findings": {
+      "description": "Each finding once, in the order it first appears in `sections`.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "severity", "description", "impact", "recommendation", "references", "tags", "affectedSystems", "images"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "severity": { "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },
+          "description": { "$ref": "#/$defs/text" },
+          "impact": { "$ref": "#/$defs/text" },
+          "recommendation": { "$ref": "#/$defs/text" },
+          "references": { "$ref": "#/$defs/stringList" },
+          "tags": { "$ref": "#/$defs/stringList" },
+          "affectedSystems": { "$ref": "#/$defs/stringList" },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "title", "caption", "path"],
+              "properties": {
+                "id": { "type": "string" },
+                "title": { "$ref": "#/$defs/optionalString" },
+                "caption": { "$ref": "#/$defs/optionalString" },
+                "path": {
+                  "description": "Relative to the payload file.",
+                  "type": "string",
+                  "pattern": "^images/[A-Za-z0-9_-]+\\.(png|jpg|gif|webp|svg)$"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "optionalTimestamp": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/timestamp" }]
+    },
+    "optionalString": {
+      "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1 }]
+    },
+    "text": {
+      "description": "Operator-written prose, as entered.",
+      "$ref": "#/$defs/optionalString"
+    },
+    "stringList": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

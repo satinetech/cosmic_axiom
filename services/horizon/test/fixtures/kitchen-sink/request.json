@@ -1,0 +1,292 @@
+{
+  "report": {
+    "id": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+    "engagementId": "9b1f2c44-1d2e-4f3a-8b5c-00000000ks01",
+    "title": "Kitchen Sink Web Application Assessment",
+    "createdAt": "2026-02-02T09:00:00.000Z",
+    "updatedAt": "2026-02-10T17:45:12.000Z",
+    "filename": "3f9e1c2a.pdf",
+    "executiveSummary": "Example Corp engaged the testing team to assess **app.example.com**.\n\nFour issues were found; one is critical.",
+    "methodology": "Testing followed the OWASP Web Security Testing Guide.",
+    "toolsAndTechniques": "- Burp Suite Professional\n- sqlmap\n- testssl.sh",
+    "conclusion": "",
+    "sections": [
+      {
+        "id": "s0000000-0000-4000-8000-000000000008",
+        "reportId": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+        "type": "CUSTOM",
+        "position": 7,
+        "title": "Closing Notes",
+        "content": "Retesting is included for 30 days.",
+        "reportFindingId": null,
+        "reportFinding": null,
+        "createdAt": "2026-02-03T09:00:00.000Z",
+        "updatedAt": "2026-02-03T09:00:00.000Z"
+      },
+      {
+        "id": "s0000000-0000-4000-8000-000000000007",
+        "reportId": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+        "type": "FINDING",
+        "position": 6,
+        "title": null,
+        "content": null,
+        "reportFindingId": null,
+        "reportFinding": null,
+        "createdAt": "2026-02-03T08:00:00.000Z",
+        "updatedAt": "2026-02-03T08:00:00.000Z"
+      },
+      {
+        "id": "s0000000-0000-4000-8000-000000000006",
+        "reportId": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+        "type": "FINDING",
+        "position": 2,
+        "title": null,
+        "content": null,
+        "reportFindingId": "f0000000-0000-4000-8000-000000000002",
+        "reportFinding": {
+          "id": "f0000000-0000-4000-8000-000000000002",
+          "reportId": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+          "title": "Reflected XSS in #search <script>alert(1)</script>",
+          "severity": "HIGH",
+          "description": "Characters that are special to markup and template languages must survive as text: # $ @ * _ ` < > & \" ' \\ { } [ ].",
+          "impact": "Session theft for any user who follows a crafted link.",
+          "recommendation": "Encode output by context.",
+          "reference": null,
+          "tags": "[\"xss\", \"OWASP A03\"]",
+          "affectedSystems": [
+            "app.example.com"
+          ],
+          "images": [],
+          "createdAt": "2026-02-02T10:00:00.000Z",
+          "updatedAt": "2026-02-02T10:00:00.000Z"
+        },
+        "createdAt": "2026-02-02T16:00:00.000Z",
+        "updatedAt": "2026-02-02T16:00:00.000Z"
+      },
+      {
+        "id": "s0000000-0000-4000-8000-000000000005",
+        "reportId": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+        "type": "FINDING",
+        "position": 5,
+        "title": null,
+        "content": null,
+        "reportFindingId": "f0000000-0000-4000-8000-000000000004",
+        "reportFinding": {
+          "id": "f0000000-0000-4000-8000-000000000004",
+          "reportId": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+          "title": "Verbose server banner",
+          "severity": "low",
+          "description": "The `Server` header discloses the exact version.",
+          "impact": "Aids reconnaissance.",
+          "recommendation": "Suppress version information.",
+          "reference": null,
+          "tags": [],
+          "affectedSystems": [],
+          "images": [],
+          "createdAt": "2026-02-02T10:00:00.000Z",
+          "updatedAt": "2026-02-02T10:00:00.000Z"
+        },
+        "createdAt": "2026-02-02T15:00:00.000Z",
+        "updatedAt": "2026-02-02T15:00:00.000Z"
+      },
+      {
+        "id": "s0000000-0000-4000-8000-000000000004",
+        "reportId": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+        "type": "FINDING",
+        "position": 4,
+        "title": null,
+        "content": null,
+        "reportFindingId": "f0000000-0000-4000-8000-000000000003",
+        "reportFinding": {
+          "id": "f0000000-0000-4000-8000-000000000003",
+          "reportId": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+          "title": "Weak TLS configuration — Ünïcödé 测试 ✓",
+          "severity": "MEDIUM",
+          "description": "TLS 1.0 and 1.1 are enabled.",
+          "impact": "Downgrade attacks.",
+          "recommendation": "Disable TLS < 1.2.",
+          "reference": "  ",
+          "tags": [],
+          "affectedSystems": [
+            "mail.example.com:443"
+          ],
+          "images": [],
+          "createdAt": "2026-02-02T10:00:00.000Z",
+          "updatedAt": "2026-02-02T10:00:00.000Z"
+        },
+        "createdAt": "2026-02-02T14:00:00.000Z",
+        "updatedAt": "2026-02-02T14:00:00.000Z"
+      },
+      {
+        "id": "s0000000-0000-4000-8000-000000000003",
+        "reportId": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+        "type": "CONNECTIVITY",
+        "position": 3,
+        "title": "Connectivity: VPN",
+        "content": "Testing originated from 203.0.113.10 over the client VPN.",
+        "reportFindingId": null,
+        "reportFinding": null,
+        "createdAt": "2026-02-02T13:00:00.000Z",
+        "updatedAt": "2026-02-02T13:00:00.000Z"
+      },
+      {
+        "id": "s0000000-0000-4000-8000-000000000002",
+        "reportId": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+        "type": "FINDING",
+        "position": 1,
+        "title": null,
+        "content": null,
+        "reportFindingId": "f0000000-0000-4000-8000-000000000001",
+        "reportFinding": {
+          "id": "f0000000-0000-4000-8000-000000000001",
+          "reportId": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+          "title": "SQL injection in /api/search?q=",
+          "severity": "CRITICAL",
+          "description": "The `q` parameter is concatenated into a SQL query.\n\nAn unauthenticated attacker can read any table, including `users.password_hash`.",
+          "impact": "Full read access to the application database.",
+          "recommendation": "Use parameterised queries.\n\n1. Replace string concatenation in `SearchRepository`.\n2. Add a regression test.",
+          "reference": "https://owasp.org/Top10/A03_2021-Injection/",
+          "tags": [
+            "injection",
+            "OWASP A03"
+          ],
+          "affectedSystems": [
+            "app.example.com",
+            "10.0.4.12"
+          ],
+          "images": [
+            {
+              "id": "i0000000-0000-4000-8000-000000000001",
+              "reportFindingId": "f0000000-0000-4000-8000-000000000001",
+              "title": "Payload response",
+              "caption": "Database version returned in the search results.",
+              "imageData": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+              "mimeType": "image/png",
+              "createdAt": "2026-02-02T10:05:00.000Z"
+            },
+            {
+              "id": "i0000000-0000-4000-8000-000000000002",
+              "reportFindingId": "f0000000-0000-4000-8000-000000000001",
+              "title": "Extracted hashes",
+              "caption": "",
+              "imageData": "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+              "mimeType": "image/gif",
+              "createdAt": "2026-02-02T10:06:00.000Z"
+            }
+          ],
+          "createdAt": "2026-02-02T10:00:00.000Z",
+          "updatedAt": "2026-02-02T10:00:00.000Z"
+        },
+        "createdAt": "2026-02-02T12:00:00.000Z",
+        "updatedAt": "2026-02-02T12:00:00.000Z"
+      },
+      {
+        "id": "s0000000-0000-4000-8000-000000000001",
+        "reportId": "5d0c7a52-3f4e-4b8e-9a61-00000000ks01",
+        "type": "CUSTOM",
+        "position": 0,
+        "title": "  ",
+        "content": "This section has a blank title.",
+        "reportFindingId": null,
+        "reportFinding": null,
+        "createdAt": "2026-02-02T11:00:00.000Z",
+        "updatedAt": "2026-02-02T11:00:00.000Z"
+      }
+    ]
+  },
+  "engagement": {
+    "id": "9b1f2c44-1d2e-4f3a-8b5c-00000000ks01",
+    "name": "Example Corp Web App 2026",
+    "description": "Annual web application test.",
+    "status": "ACTIVE",
+    "startDate": "2026-02-01T00:00:00.000Z",
+    "endDate": "2026-02-14T00:00:00.000Z",
+    "customerId": "c0000000-0000-4000-8000-0000000000ks",
+    "customer": {
+      "id": "c0000000-0000-4000-8000-0000000000ks",
+      "name": "Example Corp",
+      "customerName": "Example Corp",
+      "contactName": "Dana Reyes",
+      "contactEmail": "dana.reyes@example.com",
+      "contactPhone": "+1 555 0100",
+      "contactTitle": "Primary Contact"
+    },
+    "customerName": "Example Corp",
+    "contactName": "Dana Reyes",
+    "contactEmail": "dana.reyes@example.com",
+    "contactPhone": "+1 555 0100",
+    "contactTitle": "Primary Contact",
+    "organization": "Cosmic Axiom Security",
+    "type": "WEB_APP_PENTEST",
+    "methodology": "GRAY_BOX",
+    "complianceFrameworks": [
+      "PCI_DSS"
+    ],
+    "riskTolerance": "LOW",
+    "businessCriticalHours": null,
+    "criticalSystems": [],
+    "previousEngagements": [],
+    "budgetHours": 80,
+    "maxConcurrentTesters": 2,
+    "testingParameters": null,
+    "scopes": [
+      {
+        "id": "sc000000-0000-4000-8000-000000000001",
+        "address": "app.example.com",
+        "description": "Customer portal",
+        "inScope": true,
+        "notes": null,
+        "environment": "PRODUCTION",
+        "criticality": "CRITICAL",
+        "assetType": "WEB_APPLICATION",
+        "techStack": [
+          "React",
+          "Java"
+        ],
+        "authBoundary": null,
+        "dataClassification": "CONFIDENTIAL",
+        "geoRestrictions": null,
+        "thirdPartyDeps": [],
+        "engagementId": "9b1f2c44-1d2e-4f3a-8b5c-00000000ks01",
+        "createdAt": "2026-02-01T00:00:00.000Z",
+        "updatedAt": "2026-02-01T00:00:00.000Z"
+      },
+      {
+        "id": "sc000000-0000-4000-8000-000000000002",
+        "address": "10.0.4.0/24",
+        "description": null,
+        "inScope": true,
+        "notes": "Application tier",
+        "environment": "PRODUCTION",
+        "criticality": "HIGH",
+        "assetType": "NETWORK",
+        "techStack": [],
+        "authBoundary": null,
+        "dataClassification": "INTERNAL",
+        "geoRestrictions": null,
+        "thirdPartyDeps": [],
+        "engagementId": "9b1f2c44-1d2e-4f3a-8b5c-00000000ks01",
+        "createdAt": "2026-02-01T00:00:00.000Z",
+        "updatedAt": "2026-02-01T00:00:00.000Z"
+      },
+      {
+        "id": "sc000000-0000-4000-8000-000000000003",
+        "address": "payments.example.com",
+        "description": "Third-party processor",
+        "inScope": false,
+        "notes": "Explicitly excluded",
+        "environment": "PRODUCTION",
+        "criticality": "CRITICAL",
+        "assetType": "WEB_APPLICATION",
+        "techStack": [],
+        "authBoundary": null,
+        "dataClassification": "RESTRICTED",
+        "geoRestrictions": null,
+        "thirdPartyDeps": [],
+        "engagementId": "9b1f2c44-1d2e-4f3a-8b5c-00000000ks01",
+        "createdAt": "2026-02-01T00:00:00.000Z",
+        "updatedAt": "2026-02-01T00:00:00.000Z"
+      }
+    ]
+  }
+}

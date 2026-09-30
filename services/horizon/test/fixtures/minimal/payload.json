@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-03-01T12:00:00.000Z",
+  "report": {
+    "id": "5d0c7a52-3f4e-4b8e-9a61-000000000001",
+    "title": "Minimal Report",
+    "classification": "CONFIDENTIAL",
+    "version": "1.0",
+    "createdAt": "2026-01-05T14:30:00.000Z",
+    "updatedAt": "2026-01-05T14:30:00.000Z",
+    "executiveSummary": null,
+    "methodology": null,
+    "toolsAndTechniques": null,
+    "conclusion": null
+  },
+  "engagement": {
+    "id": "9b1f2c44-1d2e-4f3a-8b5c-000000000001",
+    "name": "Minimal Engagement",
+    "type": "NETWORK_PENTEST",
+    "methodology": "BLACK_BOX",
+    "status": "PLANNED",
+    "startDate": "2026-01-05T00:00:00.000Z",
+    "endDate": null,
+    "organization": "Cosmic Axiom Security",
+    "customer": {
+      "name": "Example Customer",
+      "contact": null
+    },
+    "scope": []
+  },
+  "sections": [],
+  "findings": []
+}
