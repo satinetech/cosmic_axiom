@@ -134,9 +134,22 @@ describe("buildPayload", () => {
         const input = minimalInput();
         input.report.executiveSummary = "   ";
         input.report.conclusion = "  Done.  ";
+        input.report.title = "  Title  ";
         const { payload } = buildPayload(input);
         assert.equal(payload.report.executiveSummary, null);
-        assert.equal(payload.report.conclusion, "Done.");
+        assert.equal(payload.report.title, "Title");
+        assert.deepEqual(payload.report.conclusion, [{ type: "paragraph", children: [{ type: "text", text: "Done." }] }]);
+    });
+
+    test("parses operator prose as Markdown and leaves titles as plain text", () => {
+        const { payload } = buildPayload(withSections([
+            { type: "CUSTOM", position: 0, title: "**not bold**", content: "**bold**" },
+            { type: "FINDING", position: 1, reportFinding: finding({ title: "*t*", impact: "*i*" }) },
+        ]));
+        assert.equal(payload.sections[0].title, "**not bold**");
+        assert.equal(payload.sections[0].content[0].children[0].type, "strong");
+        assert.equal(payload.findings[0].title, "*t*");
+        assert.equal(payload.findings[0].impact[0].children[0].type, "emphasis");
     });
 
     test("keeps markup characters as plain text", () => {

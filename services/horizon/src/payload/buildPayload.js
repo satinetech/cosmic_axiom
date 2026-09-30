@@ -6,7 +6,8 @@
  * schema/report-payload.schema.json.
  *
  * The payload is plain data: dates are ISO 8601 strings, enums keep their
- * database spelling, and nothing is pre-formatted or pre-counted. Presentation
+ * database spelling, operator prose is a closed block tree (markdown.js), and
+ * nothing is pre-formatted or pre-counted. Presentation
  * (date formats, severity totals, numbering) belongs to whichever template
  * consumes it. Finding images are split out as separate assets and referenced
  * by relative path, so the payload stays small and readable.
@@ -14,6 +15,8 @@
  * buildPayload is pure: it never mutates its input and, given the same input
  * and `now`, always returns the same result.
  */
+
+import { markdownToBlocks } from "./markdown.js";
 
 export const PAYLOAD_SCHEMA_VERSION = 1;
 
@@ -67,7 +70,7 @@ export function buildPayload({ report, engagement }, { now = new Date() } = {}) 
             }
             sections.push({ type: "FINDING", findingId: id });
         } else {
-            sections.push({ type, title: text(section.title), content: text(section.content) });
+            sections.push({ type, title: text(section.title), content: prose(section.content) });
         }
     });
 
@@ -81,10 +84,10 @@ export function buildPayload({ report, engagement }, { now = new Date() } = {}) 
             version: text(report.version) ?? "1.0",
             createdAt: date(report.createdAt, "report.createdAt"),
             updatedAt: date(report.updatedAt, "report.updatedAt"),
-            executiveSummary: text(report.executiveSummary),
-            methodology: text(report.methodology),
-            toolsAndTechniques: text(report.toolsAndTechniques),
-            conclusion: text(report.conclusion),
+            executiveSummary: prose(report.executiveSummary),
+            methodology: prose(report.methodology),
+            toolsAndTechniques: prose(report.toolsAndTechniques),
+            conclusion: prose(report.conclusion),
         },
         engagement: buildEngagement(engagement),
         sections,
@@ -144,9 +147,9 @@ function buildFinding(finding, at, assets) {
         id,
         title: text(finding.title) ?? "",
         severity,
-        description: text(finding.description),
-        impact: text(finding.impact),
-        recommendation: text(finding.recommendation),
+        description: prose(finding.description),
+        impact: prose(finding.impact),
+        recommendation: prose(finding.recommendation),
         references: text(finding.reference) ? [finding.reference.trim()] : [],
         tags: strings(finding.tags),
         affectedSystems: strings(finding.affectedSystems),
@@ -196,6 +199,12 @@ function text(value) {
     if (value === null || value === undefined) return null;
     const s = String(value).trim();
     return s === "" ? null : s;
+}
+
+/** Operator Markdown as blocks (see markdown.js), or null when blank. */
+function prose(value) {
+    const blocks = markdownToBlocks(value);
+    return blocks.length ? blocks : null;
 }
 
 /** A JSON column holding a list of strings; tolerates a JSON-encoded string. */

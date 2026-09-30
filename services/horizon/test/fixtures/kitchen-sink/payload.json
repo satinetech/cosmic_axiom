@@ -8,9 +8,92 @@
     "version": "1.0",
     "createdAt": "2026-02-02T09:00:00.000Z",
     "updatedAt": "2026-02-10T17:45:12.000Z",
-    "executiveSummary": "Example Corp engaged the testing team to assess **app.example.com**.\n\nFour issues were found; one is critical.",
-    "methodology": "Testing followed the OWASP Web Security Testing Guide.",
-    "toolsAndTechniques": "- Burp Suite Professional\n- sqlmap\n- testssl.sh",
+    "executiveSummary": [
+      {
+        "type": "paragraph",
+        "children": [
+          {
+            "type": "text",
+            "text": "Example Corp engaged the testing team to assess "
+          },
+          {
+            "type": "strong",
+            "children": [
+              {
+                "type": "text",
+                "text": "app.example.com"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "children": [
+          {
+            "type": "text",
+            "text": "Four issues were found; one is critical."
+          }
+        ]
+      }
+    ],
+    "methodology": [
+      {
+        "type": "paragraph",
+        "children": [
+          {
+            "type": "text",
+            "text": "Testing followed the OWASP Web Security Testing Guide."
+          }
+        ]
+      }
+    ],
+    "toolsAndTechniques": [
+      {
+        "type": "list",
+        "ordered": false,
+        "start": null,
+        "items": [
+          [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "text": "Burp Suite Professional"
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "text": "sqlmap"
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "text": "testssl.sh"
+                }
+              ]
+            }
+          ]
+        ]
+      }
+    ],
     "conclusion": null
   },
   "engagement": {
@@ -65,7 +148,17 @@
     {
       "type": "CUSTOM",
       "title": null,
-      "content": "This section has a blank title."
+      "content": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "This section has a blank title."
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "FINDING",
@@ -78,7 +171,17 @@
     {
       "type": "CONNECTIVITY",
       "title": "Connectivity: VPN",
-      "content": "Testing originated from 203.0.113.10 over the client VPN."
+      "content": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "Testing originated from 203.0.113.10 over the client VPN."
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "FINDING",
@@ -91,7 +194,17 @@
     {
       "type": "CUSTOM",
       "title": "Closing Notes",
-      "content": "Retesting is included for 30 days."
+      "content": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "Retesting is included for 30 days."
+            }
+          ]
+        }
+      ]
     }
   ],
   "findings": [
@@ -99,9 +212,101 @@
       "id": "f0000000-0000-4000-8000-000000000001",
       "title": "SQL injection in /api/search?q=",
       "severity": "CRITICAL",
-      "description": "The `q` parameter is concatenated into a SQL query.\n\nAn unauthenticated attacker can read any table, including `users.password_hash`.",
-      "impact": "Full read access to the application database.",
-      "recommendation": "Use parameterised queries.\n\n1. Replace string concatenation in `SearchRepository`.\n2. Add a regression test.",
+      "description": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "The "
+            },
+            {
+              "type": "code",
+              "text": "q"
+            },
+            {
+              "type": "text",
+              "text": " parameter is concatenated into a SQL query."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "An unauthenticated attacker can read any table, including "
+            },
+            {
+              "type": "code",
+              "text": "users.password_hash"
+            },
+            {
+              "type": "text",
+              "text": "."
+            }
+          ]
+        }
+      ],
+      "impact": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "Full read access to the application database."
+            }
+          ]
+        }
+      ],
+      "recommendation": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "Use parameterised queries."
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "ordered": true,
+          "start": 1,
+          "items": [
+            [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "Replace string concatenation in "
+                  },
+                  {
+                    "type": "code",
+                    "text": "SearchRepository"
+                  },
+                  {
+                    "type": "text",
+                    "text": "."
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "Add a regression test."
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      ],
       "references": [
         "https://owasp.org/Top10/A03_2021-Injection/"
       ],
@@ -132,9 +337,39 @@
       "id": "f0000000-0000-4000-8000-000000000002",
       "title": "Reflected XSS in #search <script>alert(1)</script>",
       "severity": "HIGH",
-      "description": "Characters that are special to markup and template languages must survive as text: # $ @ * _ ` < > & \" ' \\ { } [ ].",
-      "impact": "Session theft for any user who follows a crafted link.",
-      "recommendation": "Encode output by context.",
+      "description": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "Characters that are special to markup and template languages must survive as text: # $ @ * _ ` < > & \" ' \\ { } [ ]."
+            }
+          ]
+        }
+      ],
+      "impact": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "Session theft for any user who follows a crafted link."
+            }
+          ]
+        }
+      ],
+      "recommendation": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "Encode output by context."
+            }
+          ]
+        }
+      ],
       "references": [],
       "tags": [
         "xss",
@@ -149,9 +384,39 @@
       "id": "f0000000-0000-4000-8000-000000000003",
       "title": "Weak TLS configuration — Ünïcödé 测试 ✓",
       "severity": "MEDIUM",
-      "description": "TLS 1.0 and 1.1 are enabled.",
-      "impact": "Downgrade attacks.",
-      "recommendation": "Disable TLS < 1.2.",
+      "description": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "TLS 1.0 and 1.1 are enabled."
+            }
+          ]
+        }
+      ],
+      "impact": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "Downgrade attacks."
+            }
+          ]
+        }
+      ],
+      "recommendation": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "Disable TLS < 1.2."
+            }
+          ]
+        }
+      ],
       "references": [],
       "tags": [],
       "affectedSystems": [
@@ -163,9 +428,47 @@
       "id": "f0000000-0000-4000-8000-000000000004",
       "title": "Verbose server banner",
       "severity": "LOW",
-      "description": "The `Server` header discloses the exact version.",
-      "impact": "Aids reconnaissance.",
-      "recommendation": "Suppress version information.",
+      "description": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "The "
+            },
+            {
+              "type": "code",
+              "text": "Server"
+            },
+            {
+              "type": "text",
+              "text": " header discloses the exact version."
+            }
+          ]
+        }
+      ],
+      "impact": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "Aids reconnaissance."
+            }
+          ]
+        }
+      ],
+      "recommendation": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "text": "Suppress version information."
+            }
+          ]
+        }
+      ],
       "references": [],
       "tags": [],
       "affectedSystems": [],
