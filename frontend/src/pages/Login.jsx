@@ -66,6 +66,47 @@ function Login() {
         }
     }, [currentWordIndex]);
 
+    // Sign in from an authenticating proxy, when the deployment has one.
+    //
+    // Behind forward-auth (Tailscale Serve, oauth2-proxy, Authelia, an ALB with
+    // OIDC) the proxy has already established who this is, and astral exchanges
+    // that identity for a token at POST /auth/token. That route exists only when
+    // astral runs with AUTH_MODE=trusted-header; anywhere else the request
+    // reaches something that is not astral and does not answer with a token, and
+    // the password form below works exactly as before. So this needs no
+    // configuration: a deployment that routes /auth/token to astral gets
+    // automatic sign-in, and one that does not is unaffected.
+    useEffect(() => {
+        let cancelled = false;
+
+        (async () => {
+            try {
+                const url = import.meta.env.VITE_AUTH_TOKEN_URL || "/auth/token";
+                const response = await fetch(url, { method: "POST" });
+                const type = response.headers.get("content-type") || "";
+                if (!type.includes("application/json")) return;
+
+                const data = await response.json();
+                if (cancelled) return;
+
+                if (response.ok && data.token) {
+                    localStorage.setItem("token", data.token);
+                    navigate("/dashboard", { replace: true });
+                } else if (data.error) {
+                    // astral answered and refused: say why, rather than leaving
+                    // someone behind a proxy staring at a password they never had.
+                    setError(`Automatic sign-in failed: ${data.error}`);
+                }
+            } catch {
+                // Not reachable, or not JSON: sign in with a password as usual.
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [navigate]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
