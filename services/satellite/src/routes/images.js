@@ -3,7 +3,7 @@ import axios from "axios";
 import { authenticateRequest } from "../middleware/authenticateRequest.js";
 
 const router = Router();
-const SINGULARITY_URL = "http://localhost:3004";
+const SINGULARITY_URL = process.env.SINGULARITY_URL;
 
 // GET /images/finding/:reportFindingId - Get all images for a finding
 router.get("/finding/:reportFindingId", authenticateRequest, async (req, res) => {
