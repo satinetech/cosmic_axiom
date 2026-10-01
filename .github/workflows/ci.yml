@@ -53,6 +53,23 @@ jobs:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
         run: npm ci
 
+      # horizon's Typst renderer tests and golden page images need the typst
+      # binary; without it they skip. Pinned by version and checksum, and kept
+      # in step with services/horizon/test/golden/TYPST_VERSION -- with any
+      # other version the golden test skips rather than runs.
+      - name: Install Typst
+        if: matrix.service == 'horizon'
+        env:
+          TYPST_VERSION: '0.15.1'
+          TYPST_SHA256: a6d077d0a95eed5a2eba715b2dae06be954f624ccbf85758a03f389ded33118c
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/typst.tar.xz" \
+            "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz"
+          echo "${TYPST_SHA256}  $RUNNER_TEMP/typst.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/typst.tar.xz" -C "$RUNNER_TEMP"
+          sudo install -m 0755 "$RUNNER_TEMP/typst-x86_64-unknown-linux-musl/typst" /usr/local/bin/typst
+          typst --version
+
       # --if-present so a service without tests yet is skipped rather than
       # failing on a missing script. Services opt in by adding a "test" script as
       # they gain coverage; no placeholder scripts are needed in the meantime.
