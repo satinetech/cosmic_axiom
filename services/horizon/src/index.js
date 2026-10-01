@@ -18,6 +18,10 @@ const __dirname = path.dirname(__filename);
 
 app.use(cors());
 app.use(morgan('dev'));
+// A report is posted with every finding's screenshots inline as base64, so the
+// generate routes need far more than Express's 100 KB default, which rejects
+// any report with a real screenshot in it. Every other route keeps the default.
+app.use(['/generate', '/generate-briefing', '/generate-roe'], express.json({ limit: process.env.REPORT_BODY_LIMIT || '100mb' }));
 app.use(express.json());
 
 // Unauthenticated liveness probe, mounted ahead of the
