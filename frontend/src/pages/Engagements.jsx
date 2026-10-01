@@ -25,6 +25,9 @@ function Engagements() {
     const [isCreatingReport, setIsCreatingReport] = useState(false);
     const [isCreatingRoE, setIsCreatingRoE] = useState(false);
     const [openDropdown, setOpenDropdown] = useState(null);
+    // Where the open actions menu sits on screen. It is position: fixed so the
+    // table's scrolling container cannot clip it.
+    const [menuPosition, setMenuPosition] = useState(null);
     const token = localStorage.getItem("token");
 
     useEffect(() => {
@@ -70,11 +73,36 @@ function Engagements() {
             }
         };
 
+        // A fixed menu would stay put while the page or table scrolls under it,
+        // so close it instead.
+        const close = () => setOpenDropdown(null);
+
         document.addEventListener('mousedown', handleClickOutside);
+        if (openDropdown) {
+            window.addEventListener('scroll', close, true);
+            window.addEventListener('resize', close);
+        }
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
+            window.removeEventListener('scroll', close, true);
+            window.removeEventListener('resize', close);
         };
     }, [openDropdown]);
+
+    // Opens below the button, or above it when there is not room below.
+    const MENU_HEIGHT = 240;
+    const toggleMenu = (engagementId, button) => {
+        if (openDropdown === engagementId) {
+            setOpenDropdown(null);
+            return;
+        }
+        const rect = button.getBoundingClientRect();
+        const right = window.innerWidth - rect.right;
+        setMenuPosition(window.innerHeight - rect.bottom < MENU_HEIGHT
+            ? { bottom: window.innerHeight - rect.top + 8, right }
+            : { top: rect.bottom + 8, right });
+        setOpenDropdown(engagementId);
+    };
 
     const handleSaveEngagement = async (engagementData) => {
         try {
@@ -468,7 +496,7 @@ function Engagements() {
                                         {/* More Actions Dropdown */}
                                         <div className="relative">
                                             <button
-                                                onClick={() => setOpenDropdown(openDropdown === engagement.id ? null : engagement.id)}
+                                                onClick={(e) => toggleMenu(engagement.id, e.currentTarget)}
                                                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 rounded-lg transition-all duration-200"
                                                 title="More Actions"
                                             >
@@ -476,7 +504,7 @@ function Engagements() {
                                             </button>
                                             
                                             {openDropdown === engagement.id && (
-                                                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
+                                                <div style={menuPosition} className="fixed w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
                                                     <button
                                                         onClick={() => {
                                                             setSelectedEngagement(engagement);
