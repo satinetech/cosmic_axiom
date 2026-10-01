@@ -9,7 +9,7 @@
     "executiveSummary": "Example Corp engaged the testing team to assess **app.example.com**.\n\nFour issues were found; one is critical.",
     "methodology": "Testing followed the OWASP Web Security Testing Guide.",
     "toolsAndTechniques": "- Burp Suite Professional\n- sqlmap\n- testssl.sh",
-    "conclusion": "",
+    "conclusion": "The critical finding should be fixed before the next release.\n\n> Retest once the fix is deployed.",
     "sections": [
       {
         "id": "s0000000-0000-4000-8000-000000000008",
