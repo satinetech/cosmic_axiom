@@ -175,30 +175,44 @@ function ScopeModal({ isOpen, onClose, engagement, onScopeUpdated }) {
                     {/* Add New Scope */}
                     <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
                         <h4 className="font-medium mb-3">Add Single Entry</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <form
+                            className="flex flex-col md:flex-row gap-3"
+                            onSubmit={(e) => { e.preventDefault(); handleAddScope(); }}
+                        >
                             <input
                                 type="text"
                                 value={newScope.address}
                                 onChange={(e) => setNewScope(prev => ({ ...prev, address: e.target.value }))}
-                                placeholder="IP, domain, or subnet (e.g., 192.168.1.0/24)"
-                                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                placeholder="IP, domain or CIDR, e.g. 192.168.1.0/24"
+                                aria-label="Address"
+                                className="md:flex-[2] min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono text-sm"
                             />
                             <input
                                 type="text"
                                 value={newScope.description}
                                 onChange={(e) => setNewScope(prev => ({ ...prev, description: e.target.value }))}
                                 placeholder="Description (optional)"
-                                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                aria-label="Description"
+                                className="md:flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                             />
+                            <select
+                                value={newScope.inScope ? "in" : "out"}
+                                onChange={(e) => setNewScope(prev => ({ ...prev, inScope: e.target.value === "in" }))}
+                                aria-label="In or out of scope"
+                                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            >
+                                <option value="in">In scope</option>
+                                <option value="out">Out of scope</option>
+                            </select>
                             <button
-                                onClick={handleAddScope}
+                                type="submit"
                                 disabled={!newScope.address.trim()}
                                 className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                             >
                                 <Plus className="w-4 h-4" />
                                 Add
                             </button>
-                        </div>
+                        </form>
                     </div>
 
                     {/* Bulk Upload */}
@@ -272,7 +286,7 @@ function ScopeModal({ isOpen, onClose, engagement, onScopeUpdated }) {
                                 <table className="w-full">
                                     <thead className="bg-gray-50 dark:bg-gray-900">
                                         <tr>
-                                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Status</th>
+                                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Status <span className="font-normal text-gray-400">(click to change)</span></th>
                                             <th className="px-4 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Address</th>
                                             <th className="px-4 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Description</th>
                                             <th className="px-4 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
@@ -284,6 +298,7 @@ function ScopeModal({ isOpen, onClose, engagement, onScopeUpdated }) {
                                                 <td className="px-4 py-2">
                                                     <button
                                                         onClick={() => toggleScopeStatus(scope)}
+                                                        title={scope.inScope ? "In scope. Click to mark out of scope" : "Out of scope. Click to mark in scope"}
                                                         className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                                             scope.inScope 
                                                                 ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
