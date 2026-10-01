@@ -10,8 +10,9 @@ export async function authenticateRequest(req, res, next) {
 
     try {
         const result = await verifyToken(token);
-        if (!result.valid) {
-            return res.status(403).json({ error: result.reason || 'Invalid token' });
+        // null for a token that is malformed, badly signed, expired or revoked.
+        if (!result?.valid) {
+            return res.status(403).json({ error: 'Invalid or expired token' });
         }
 
         req.tokenPayload = result.payload;
