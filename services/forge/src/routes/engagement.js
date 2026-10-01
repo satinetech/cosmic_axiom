@@ -276,6 +276,11 @@ router.delete("/:id", authenticateRequest, async (req, res) => {
 
         res.json({ message: "Engagement deleted successfully" });
     } catch (err) {
+        if (err.code === "P2003") {
+            // Its operator log is a record of what was done; it is kept, so
+            // the engagement is too.
+            return res.status(409).json({ error: "This engagement has an operator log and cannot be deleted" });
+        }
         console.error("Failed to delete engagement:", err.message);
         res.status(500).json({ error: "Failed to delete engagement" });
     }

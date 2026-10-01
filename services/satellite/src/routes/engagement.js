@@ -135,6 +135,17 @@ router.put("/:id", authenticateRequest, async (req, res) => {
 // DELETE /engagement/:id
 router.delete("/:id", authenticateRequest, async (req, res) => {
     try {
+        // An engagement with an operator log is kept (forge refuses to delete
+        // it), so check before deleting its reports -- otherwise they would be
+        // gone and the engagement still there.
+        const logRes = await axios.get(`${FORGE_URL}/engagement/${req.params.id}/log`, {
+            params: { limit: 1 },
+            headers: { Authorization: req.headers.authorization },
+        });
+        if (logRes.data.length > 0) {
+            return res.status(409).json({ error: "This engagement has an operator log and cannot be deleted" });
+        }
+
         // First, find and delete all reports associated with this engagement
         const reportsRes = await axios.get(`${SINGULARITY_URL}/reports?engagementId=${req.params.id}`, {
             headers: { Authorization: req.headers.authorization },
@@ -157,6 +168,7 @@ router.delete("/:id", authenticateRequest, async (req, res) => {
         res.json({ message: "Engagement and all associated data deleted successfully" });
     } catch (err) {
         console.error(`DELETE /engagement/${req.params.id} failed:`, err.message);
+        if (err.response?.status === 409) return res.status(409).json(err.response.data);
         res.status(500).json({ error: "Failed to delete engagement" });
     }
 });
