@@ -36,6 +36,9 @@ model Contact {
 model Engagement {
   id           String     @id @default(uuid())
   name         String
+  // A reference to this engagement in another system that created it (a
+  // ticket, a case, a CRM record). Unique, so creating from it is idempotent.
+  externalRef  String?    @unique
   description  String?
   startDate    DateTime
   endDate      DateTime?
