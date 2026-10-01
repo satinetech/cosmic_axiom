@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowLeft, CheckCircle, ChevronDown, ChevronRight, Clock, Link2, Loader2, ShieldAlert, XCircle } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 const API = import.meta.env.VITE_SATELLITE_URL;
@@ -27,7 +27,7 @@ function localInputValue(date) {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-const emptyForm = () => ({ summary: "", occurredAt: "", targetAddress: "", tool: "", command: "", output: "", correctsSeq: "" });
+const emptyForm = () => ({ summary: "", earlier: false, occurredAt: "", targetAddress: "", tool: "", command: "", output: "", correctsSeq: "" });
 
 function OperatorLog() {
     const { engagementId } = useParams();
@@ -41,6 +41,9 @@ function OperatorLog() {
     const [formError, setFormError] = useState(null);
     const [saving, setSaving] = useState(false);
     const [expanded, setExpanded] = useState({});
+    const [moreOpen, setMoreOpen] = useState(false);
+    const [scopeAddresses, setScopeAddresses] = useState([]);
+    const summaryRef = useRef(null);
 
     const load = useCallback(async () => {
         try {
@@ -69,6 +72,10 @@ function OperatorLog() {
         load();
         fetch(`${API}/engagement/${engagementId}`, { headers: authHeaders() })
             .then((r) => (r.ok ? r.json() : null)).then(setEngagement).catch(() => {});
+        fetch(`${API}/scope/engagement/${engagementId}`, { headers: authHeaders() })
+            .then((r) => (r.ok ? r.json() : []))
+            .then((list) => setScopeAddresses(list.map((s) => s.address)))
+            .catch(() => {});
         fetch(`${API}/users`, { headers: authHeaders() })
             .then((r) => (r.ok ? r.json() : []))
             .then((list) => setUsers(Object.fromEntries(list.map((u) => [u.id, u.name || u.username]))))
@@ -83,12 +90,22 @@ function OperatorLog() {
 
     const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
+    // Suggestions: the engagement's scope and anything already logged.
+    const targetSuggestions = useMemo(
+        () => [...new Set([...scopeAddresses, ...entries.map((e) => e.targetAddress).filter(Boolean)])],
+        [scopeAddresses, entries],
+    );
+    const toolSuggestions = useMemo(() => [...new Set(entries.map((e) => e.tool).filter(Boolean))], [entries]);
+
+    const toggleEarlier = (checked) =>
+        setForm((f) => ({ ...f, earlier: checked, occurredAt: checked ? f.occurredAt || localInputValue(new Date()) : "" }));
+
     const submit = async (e) => {
         e.preventDefault();
         setSaving(true);
         setFormError(null);
         const body = { summary: form.summary };
-        if (form.occurredAt) body.occurredAt = new Date(form.occurredAt).toISOString();
+        if (form.earlier && form.occurredAt) body.occurredAt = new Date(form.occurredAt).toISOString();
         for (const field of ["targetAddress", "tool", "command", "output"]) if (form[field].trim()) body[field] = form[field];
         if (form.correctsSeq) body.correctsSeq = Number(form.correctsSeq);
         try {
@@ -100,10 +117,14 @@ function OperatorLog() {
             const data = await res.json();
             if (!res.ok) {
                 setFormError({ field: data.field, message: data.error || "Could not save the entry" });
+                // Show the field at fault if it is in the collapsed section.
+                if (["occurredAt", "command", "output", "correctsSeq"].includes(data.field)) setMoreOpen(true);
                 return;
             }
-            setForm(emptyForm());
+            // Keep target and tool: the next entry is usually about the same thing.
+            setForm((f) => ({ ...emptyForm(), targetAddress: f.targetAddress, tool: f.tool }));
             await load();
+            summaryRef.current?.focus();
         } catch (err) {
             setFormError({ message: err.message });
         } finally {
@@ -143,49 +164,67 @@ function OperatorLog() {
             )}
 
             <form onSubmit={submit} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-3">
-                <h2 className="font-medium text-gray-900 dark:text-white">New entry</h2>
-                <div>
-                    <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">What was done, and why <span className="text-red-500">*</span></label>
-                    <textarea rows={3} value={form.summary} onChange={set("summary")} required className={inputClass("summary")}
-                        placeholder="e.g. Tested the login form for SQL injection; confirmed blind boolean-based injection in the username field." />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div>
-                        <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">When it happened</label>
-                        <input type="datetime-local" value={form.occurredAt} onChange={set("occurredAt")} max={localInputValue(new Date())} className={inputClass("occurredAt")} />
-                        <p className="mt-1 text-xs text-gray-500">Blank means now. Earlier times are marked as written up later.</p>
-                    </div>
-                    <div>
-                        <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Target</label>
-                        <input value={form.targetAddress} onChange={set("targetAddress")} className={inputClass("targetAddress")} placeholder="Host, IP or URL, as you'd type it" />
-                    </div>
-                    <div>
-                        <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Tool</label>
-                        <input value={form.tool} onChange={set("tool")} className={inputClass("tool")} placeholder="e.g. Burp Suite" />
-                    </div>
-                </div>
-                <div>
-                    <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Command</label>
-                    <textarea rows={2} value={form.command} onChange={set("command")} className={`${inputClass("command")} font-mono`} />
-                </div>
-                <div>
-                    <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Output</label>
-                    <textarea rows={3} value={form.output} onChange={set("output")} className={`${inputClass("output")} font-mono`} />
-                </div>
-                <div className="flex flex-wrap items-end gap-3">
-                    <div>
-                        <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Corrects entry</label>
-                        <select value={form.correctsSeq} onChange={set("correctsSeq")} className={inputClass("correctsSeq")}>
-                            <option value="">—</option>
-                            {entries.map((e) => <option key={e.seq} value={e.seq}>#{e.seq}</option>)}
-                        </select>
-                    </div>
-                    <p className="flex-1 text-xs text-gray-500">Entries can't be edited or deleted. To fix a mistake, write a new entry that corrects it.</p>
-                    <button type="submit" disabled={saving}
-                        className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                <textarea
+                    ref={summaryRef}
+                    rows={2}
+                    autoFocus
+                    value={form.summary}
+                    onChange={set("summary")}
+                    onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit(e); }}
+                    required
+                    aria-label="What was done, and why"
+                    className={inputClass("summary")}
+                    placeholder="What did you do, and why? e.g. Tested the login form for SQL injection; blind boolean-based injection in the username field."
+                />
+                <div className="flex flex-col md:flex-row gap-3">
+                    <input value={form.targetAddress} onChange={set("targetAddress")} list="oplog-targets" aria-label="Target"
+                        className={`${inputClass("targetAddress")} md:flex-[2] font-mono`} placeholder="Target (optional): host, IP or URL" />
+                    <datalist id="oplog-targets">{targetSuggestions.map((t) => <option key={t} value={t} />)}</datalist>
+                    <input value={form.tool} onChange={set("tool")} list="oplog-tools" aria-label="Tool"
+                        className={`${inputClass("tool")} md:flex-1`} placeholder="Tool (optional)" />
+                    <datalist id="oplog-tools">{toolSuggestions.map((t) => <option key={t} value={t} />)}</datalist>
+                    <button type="submit" disabled={saving || !form.summary.trim()}
+                        className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap">
                         {saving && <Loader2 size={14} className="animate-spin" />} Add entry
                     </button>
                 </div>
+                <div className="flex items-center justify-between gap-3 text-xs text-gray-500">
+                    <button type="button" onClick={() => setMoreOpen((o) => !o)} className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-300">
+                        {moreOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                        More detail: when, command, output, corrections
+                    </button>
+                    <span>Ctrl+Enter adds the entry. Entries can't be edited or deleted; fix a mistake with a correcting entry.</span>
+                </div>
+                {moreOpen && (
+                    <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                <input type="checkbox" checked={form.earlier} onChange={(e) => toggleEarlier(e.target.checked)} />
+                                This happened earlier
+                            </label>
+                            {form.earlier && (
+                                <input type="datetime-local" value={form.occurredAt} onChange={set("occurredAt")} max={localInputValue(new Date())}
+                                    aria-label="When it happened" className={`${inputClass("occurredAt")} w-auto`} />
+                            )}
+                            <span className="text-xs text-gray-500">
+                                {form.earlier ? "The entry will show that it was written up later." : "Otherwise the entry is timed now."}
+                            </span>
+                        </div>
+                        <textarea rows={2} value={form.command} onChange={set("command")} aria-label="Command"
+                            placeholder="Command (optional)" className={`${inputClass("command")} font-mono`} />
+                        <textarea rows={3} value={form.output} onChange={set("output")} aria-label="Output"
+                            placeholder="Output (optional)" className={`${inputClass("output")} font-mono`} />
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                            Corrects entry
+                            <select value={form.correctsSeq} onChange={set("correctsSeq")} className={`${inputClass("correctsSeq")} w-auto`}>
+                                <option value="">none</option>
+                                {[...entries].reverse().map((e) => (
+                                    <option key={e.seq} value={e.seq}>#{e.seq}: {e.summary.slice(0, 60)}</option>
+                                ))}
+                            </select>
+                        </label>
+                    </div>
+                )}
                 {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError.message}</p>}
             </form>
 
