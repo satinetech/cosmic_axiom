@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import customerRoutes from './customer.js';
 import engagementRoutes from "./engagement.js";
+import oplogRoutes from './oplog.js';
 import findingsRoutes from './findings.js';
 import healthRoutes from './health.js';
 import reportsRoutes from './reports.js';
@@ -23,6 +24,7 @@ router.use('/health', healthRoutes);
 router.use('/users', userRoutes);
 router.use('/findings', findingsRoutes);
 router.use('/customer', customerRoutes);
+router.use("/engagement", oplogRoutes);
 router.use("/engagement", engagementRoutes);
 router.use('/sections', sectionsRoutes);
 router.use('/reports', reportsRoutes);
