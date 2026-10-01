@@ -61,6 +61,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY . .
 COPY --from=build /app/node_modules ./node_modules
 
+# Evidence files (EVIDENCE_ROOT, default /app/evidence). Created and owned
+# before the user drops: an unprivileged process cannot mkdir in a root-owned
+# /app, and a named volume mounted here takes this directory's ownership when
+# it is first created.
+RUN mkdir -p evidence && chown node:node evidence
+
 # The base image already provides an unprivileged `node` user.
 USER node
 
