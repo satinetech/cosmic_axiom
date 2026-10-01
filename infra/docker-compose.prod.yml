@@ -230,6 +230,12 @@ services:
       DATABASE_URL: mysql://${MYSQL_USER:-microservice_user}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD in infra/.env}@mysql:3306/singularity
       ASTRAL_URL: http://astral:3001
       HORIZON_URL: http://horizon:3006
+      EVIDENCE_ROOT: /app/evidence
+    volumes:
+      # Evidence files (screenshots and other attachments), content-addressed
+      # by sha256. MySQL holds only their metadata, so this volume is half of
+      # the data: back it up with the database, never instead of it.
+      - singularity_evidence:/app/evidence
     depends_on:
       singularity-migrate:
         condition: service_completed_successfully
@@ -363,3 +369,4 @@ volumes:
   mysql_data:
   jwt_keys:
   horizon_generated:
+  singularity_evidence:
