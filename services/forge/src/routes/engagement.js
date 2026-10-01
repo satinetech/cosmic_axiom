@@ -70,6 +70,7 @@ router.get("/:id", authenticateRequest, async (req, res) => {
         
         res.json({
             id: engagement.id,
+            externalRef: engagement.externalRef,
             name: engagement.name,
             description: engagement.description,
             status: engagement.status,
