@@ -25,3 +25,16 @@ would fail on `CREATE TABLE`. Tell Prisma it is already applied instead:
 This only writes a row to `_prisma_migrations`; it does not touch your data.
 Run it once per database, after which `prisma migrate status` reports the
 schema up to date and later migrations apply normally.
+
+## Copying images into the evidence store
+
+`20261001120000_evidence` adds content-addressed evidence beside
+`FindingImage`. Existing images keep working as they are; to move their bytes
+out of the database onto disk, run once per deployment, with `EVIDENCE_ROOT`
+set to persistent storage:
+
+    node scripts/backfill-evidence.js --dry-run   # how many are left
+    node scripts/backfill-evidence.js             # copy them
+
+It can be interrupted and re-run at any time, never changes or deletes a
+`FindingImage`, and exits non-zero listing any image it could not copy.
