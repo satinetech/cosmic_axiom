@@ -1,6 +1,6 @@
 import { generatePdf, generateBriefingPdf, generateRoePdf } from "../services/generateReport.js";
 import { buildPayload, PayloadError } from "../payload/buildPayload.js";
-import { renderTypst, TypstError } from "../renderers/typst.js";
+import { BUILTIN_TEMPLATES_DIR, renderTypst, resolveTemplate, TypstError } from "../renderers/typst.js";
 import fs from "fs";
 import path from "path";
 
@@ -11,9 +11,24 @@ if (!["html", "typst"].includes(REPORT_RENDERER)) {
     throw new Error(`REPORT_RENDERER must be "html" or "typst", not "${process.env.REPORT_RENDERER}"`);
 }
 
+// The Typst template: TYPST_TEMPLATES_DIR is a directory of templates (the
+// built-in templates/typst by default), TYPST_TEMPLATE the one to use.
+const TYPST_TEMPLATES_DIR = path.resolve(process.env.TYPST_TEMPLATES_DIR || BUILTIN_TEMPLATES_DIR);
+const TYPST_TEMPLATE = process.env.TYPST_TEMPLATE || "report";
+if (REPORT_RENDERER === "typst") {
+    resolveTemplate(TYPST_TEMPLATES_DIR, TYPST_TEMPLATE);
+}
+
 async function generateTypstPdf({ report, engagement, existingFilename }) {
     const { payload, assets } = buildPayload({ report, engagement });
-    return renderTypst({ payload, assets, outputDir: path.resolve("generated"), filename: existingFilename });
+    return renderTypst({
+        payload,
+        assets,
+        outputDir: path.resolve("generated"),
+        filename: existingFilename,
+        templatesDir: TYPST_TEMPLATES_DIR,
+        template: TYPST_TEMPLATE,
+    });
 }
 
 export const generatePdfReport = async (req, res) => {

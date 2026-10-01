@@ -4,7 +4,9 @@
  * Compiles a report payload (see src/payload/buildPayload.js) with a Typst
  * template into a PDF. Each render gets a scratch directory laid out as
  *
- *   template/   a copy of the template directory (main.typ is the entry point)
+ *   templates/  a copy of the templates directory; each template is a
+ *               subdirectory whose main.typ is its entry point, and may
+ *               import shared files from sibling directories
  *   data/       payload.json and the finding images beside it
  *
  * and Typst runs with that directory as --root, so the template can read
@@ -23,7 +25,27 @@ import os from "os";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
-export const DEFAULT_TEMPLATE_DIR = path.resolve("templates/typst/report");
+export const BUILTIN_TEMPLATES_DIR = path.resolve("templates/typst");
+const TEMPLATE_NAME = /^[A-Za-z0-9_-]+$/;
+
+/**
+ * Checks that `templatesDir` holds a template called `template` and returns
+ * its entry point. Throws an Error that says what is wrong, so a misconfigured
+ * deployment fails at startup rather than on the first report.
+ */
+export function resolveTemplate(templatesDir, template) {
+    if (!TEMPLATE_NAME.test(template)) {
+        throw new Error(`Typst template name must be letters, digits, "-" or "_", not "${template}"`);
+    }
+    if (!fs.existsSync(templatesDir) || !fs.statSync(templatesDir).isDirectory()) {
+        throw new Error(`Typst templates directory not found: ${templatesDir}`);
+    }
+    const entry = path.join(templatesDir, template, "main.typ");
+    if (!fs.existsSync(entry)) {
+        throw new Error(`Typst template "${template}" not found: expected ${entry}`);
+    }
+    return entry;
+}
 
 /** The template failed to compile. `diagnostics` holds Typst's parsed errors. */
 export class TypstError extends Error {
@@ -42,7 +64,8 @@ export class TypstError extends Error {
  * @param {string} options.outputDir
  * @param {string|null} [options.filename]  reuse this name; otherwise a new UUID name
  * @param {string} [options.prefix]
- * @param {string} [options.templateDir]
+ * @param {string} [options.templatesDir]  a directory of templates
+ * @param {string} [options.template]  the subdirectory to compile
  * @param {string} [options.typstBin]
  * @param {number} [options.timeoutMs]
  * @returns {Promise<string>} the PDF's file name within outputDir
@@ -53,13 +76,16 @@ export async function renderTypst({
     outputDir,
     filename = null,
     prefix = "",
-    templateDir = DEFAULT_TEMPLATE_DIR,
+    templatesDir = BUILTIN_TEMPLATES_DIR,
+    template = "report",
     typstBin = process.env.TYPST_BIN || "typst",
     timeoutMs = 60_000,
 }) {
+    resolveTemplate(templatesDir, template);
     const work = fs.mkdtempSync(path.join(os.tmpdir(), "horizon-typst-"));
     try {
-        fs.cpSync(templateDir, path.join(work, "template"), { recursive: true });
+        // Dereference symlinks: the copy holds real files, all inside --root.
+        fs.cpSync(templatesDir, path.join(work, "templates"), { recursive: true, dereference: true });
         const dataDir = path.join(work, "data");
         fs.mkdirSync(dataDir);
         fs.writeFileSync(path.join(dataDir, "payload.json"), JSON.stringify(payload));
@@ -78,7 +104,7 @@ export async function renderTypst({
             "--ignore-system-fonts",
             "--input", "payload=/data/payload.json",
             ...creationTimestamp(payload.generatedAt),
-            path.join(work, "template", "main.typ"),
+            path.join(work, "templates", template, "main.typ"),
             pdf,
         ];
         await run(typstBin, args, timeoutMs, work);
@@ -118,7 +144,7 @@ function run(bin, args, timeoutMs, work) {
 /**
  * Parses Typst's short diagnostic format, one problem per line:
  *
- *   template/main.typ:12:3: error: unknown variable: foo
+ *   templates/report/main.typ:12:3: error: unknown variable: foo
  *
  * Returns [{ severity, message, file, line, column }]; location fields are
  * null for a diagnostic Typst could not place.
