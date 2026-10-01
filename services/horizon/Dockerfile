@@ -19,6 +19,32 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 
+# Typst, for the optional Typst report renderer (REPORT_RENDERER=typst). A
+# static musl binary, fetched in its own stage so curl never reaches the
+# runtime image, and pinned by version and per-architecture sha256 -- the
+# release's own published digests. Keep TYPST_VERSION in step with
+# test/golden/TYPST_VERSION and the CI workflow.
+FROM node:20-slim AS typst
+ARG TARGETARCH
+ARG TYPST_VERSION=0.15.1
+ARG TYPST_SHA256_AMD64=a6d077d0a95eed5a2eba715b2dae06be954f624ccbf85758a03f389ded33118c
+ARG TYPST_SHA256_ARM64=5aa8d74a3d906e60ea12a66ac2f37f8eef1b14cbad7182a745e393a10c23dcee
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+RUN set -eu; \
+    case "${TARGETARCH:-amd64}" in \
+        amd64) arch=x86_64;  sum="$TYPST_SHA256_AMD64" ;; \
+        arm64) arch=aarch64; sum="$TYPST_SHA256_ARM64" ;; \
+        *) echo "no pinned Typst build for ${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL -o /tmp/typst.tar.xz \
+        "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-${arch}-unknown-linux-musl.tar.xz"; \
+    echo "${sum}  /tmp/typst.tar.xz" | sha256sum -c -; \
+    tar -xJf /tmp/typst.tar.xz -C /tmp; \
+    install -m 0755 "/tmp/typst-${arch}-unknown-linux-musl/typst" /usr/local/bin/typst; \
+    typst --version
+
+
 FROM node:20-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
@@ -42,6 +68,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+# Only used when REPORT_RENDERER=typst. The renderer ignores system fonts so
+# output is identical on every host; point TYPST_FONT_PATHS at a font
+# directory (for example /usr/share/fonts/opentype/noto for CJK) to add some.
+COPY --from=typst /usr/local/bin/typst /usr/local/bin/typst
 
 # Source first, then node_modules -- deliberately in that order. .dockerignore
 # excludes node_modules from the context, but if that ever stops being true, a
