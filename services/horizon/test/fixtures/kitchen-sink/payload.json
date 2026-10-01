@@ -94,7 +94,31 @@
         ]
       }
     ],
-    "conclusion": null
+    "conclusion": [
+      {
+        "type": "paragraph",
+        "children": [
+          {
+            "type": "text",
+            "text": "The critical finding should be fixed before the next release."
+          }
+        ]
+      },
+      {
+        "type": "quote",
+        "children": [
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "type": "text",
+                "text": "Retest once the fix is deployed."
+              }
+            ]
+          }
+        ]
+      }
+    ]
   },
   "engagement": {
     "id": "9b1f2c44-1d2e-4f3a-8b5c-00000000ks01",
