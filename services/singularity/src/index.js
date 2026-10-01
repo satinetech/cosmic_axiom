@@ -11,6 +11,10 @@ const port = process.env.PORT || 3004;
 
 app.use(cors());
 app.use(morgan('dev'));
+// Images arrive as base64 inside JSON, so /images needs a far larger body than
+// Express's 100 KB default, which rejects any real screenshot with a 413. Every
+// other route keeps the default.
+app.use('/images', express.json({ limit: process.env.IMAGE_BODY_LIMIT || '10mb' }));
 app.use(express.json());
 
 app.use('/', routes);
