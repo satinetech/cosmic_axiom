@@ -1,4 +1,4 @@
-import { Plus, Edit2, Trash2, Search, Filter, Calendar, Users, FileText, ChevronDown, ChevronUp, Target, Shield, MoreHorizontal } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, Filter, Calendar, Users, FileText, ChevronDown, ChevronUp, Target, Shield, MoreHorizontal, ScrollText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import NewEngagementModal from "../components/NewEngagementModal";
@@ -120,12 +120,18 @@ function Engagements() {
         if (!confirm("Are you sure you want to delete this engagement?")) return;
         
         try {
-            await fetch(`${import.meta.env.VITE_SATELLITE_URL}/engagement/${engagementId}`, {
+            const res = await fetch(`${import.meta.env.VITE_SATELLITE_URL}/engagement/${engagementId}`, {
                 method: "DELETE",
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
             });
+            if (!res.ok) {
+                // e.g. 409: an engagement with an operator log is kept.
+                const body = await res.json().catch(() => ({}));
+                alert(body.error || "Failed to delete engagement");
+                return;
+            }
             setEngagements((prev) => prev.filter(e => e.id !== engagementId));
         } catch (err) {
             console.error("Failed to delete engagement", err);
@@ -488,6 +494,15 @@ function Engagements() {
                                                         <Target size={14} />
                                                         Manage Scope
                                                     </button>
+
+                                                    <Link
+                                                        to={`/engagements/${engagement.id}/log`}
+                                                        onClick={() => setOpenDropdown(null)}
+                                                        className="block w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 flex items-center gap-2"
+                                                    >
+                                                        <ScrollText size={14} />
+                                                        Operator Log
+                                                    </Link>
                                                     
 
                                                     <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
