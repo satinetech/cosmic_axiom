@@ -73,9 +73,11 @@ export async function verifyToken(token) {
         if (revokedToken) return null;
         return { valid:true, payload: decoded}
     } catch (err) {
-        // Don't leak token or sensitive details
+        // Don't leak token or sensitive details. A token that fails
+        // verification is invalid: return null, as for a revoked one, so the
+        // caller refuses it.
         console.error('Token verification failed:', err.message);
-        return { valid:true, reason: 'Token verification failed: ' + err.message}
+        return null;
     }
 }
 
