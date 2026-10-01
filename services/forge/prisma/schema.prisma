@@ -66,6 +66,7 @@ model Engagement {
 
   scopes       Scope[]
   testingParameters TestingParameters?
+  logEntries   OperatorLogEntry[]
 }
 
 model Scope {
@@ -220,4 +221,74 @@ enum DataClassification {
   CONFIDENTIAL
   RESTRICTED
   TOP_SECRET
+}
+
+// ---------------------------------------------------------------------------
+// Operator log: what was done during an engagement, written by the people who
+// did it. Append-only and hash-chained per engagement; see src/oplog/chain.js.
+// ---------------------------------------------------------------------------
+
+// One entry. Nothing here is ever updated or deleted: a mistake is fixed by a
+// new entry whose correctsSeq names the one it corrects.
+model OperatorLogEntry {
+  id            String     @id @default(uuid())
+  engagement    Engagement @relation(fields: [engagementId], references: [id], onDelete: Restrict)
+  engagementId  String
+  // 1, 2, 3, ... within the engagement, with no gaps.
+  seq           Int
+
+  // When it happened, as the operator says; when it was written, as the server
+  // says; and whether the gap between them was large enough to call the entry
+  // backdated. Three separate facts, so a log written up afterwards says so.
+  occurredAt    DateTime   @db.DateTime(3)
+  recordedAt    DateTime   @db.DateTime(3)
+  backdated     Boolean
+
+  // The user who wrote it (the token's subject).
+  operator      String
+
+  // Required: what was done and why, in words. Everything else is optional.
+  summary       String     @db.Text
+  command       String?    @db.Text
+  output        String?    @db.Text
+  tool          String?
+  // Exactly as typed -- never normalised or resolved. That string is the record.
+  targetAddress String?
+
+  // Whether targetAddress was in scope, judged against the engagement's scope
+  // when the entry was written and frozen there: "was this authorised when it
+  // was done" is the question that matters later.
+  scopeVerdict  ScopeVerdict?
+
+  correctsSeq   Int?
+
+  // The chain: prevDigest is the previous entry's entryDigest (64 zeros for
+  // seq 1); entryDigest is the sha256 of this entry's canonical form, which
+  // includes prevDigest. Editing any entry breaks every digest after it.
+  prevDigest    String     @db.Char(64)
+  entryDigest   String     @unique @db.Char(64)
+
+  attachments   OplogAttachment[]
+
+  @@unique([engagementId, seq])
+}
+
+enum ScopeVerdict {
+  IN_SCOPE
+  OUT_OF_SCOPE
+  NOT_LISTED
+}
+
+// A file attached to an entry, by content hash: the same sha256 that names it
+// in the evidence store, so the reference holds across services without a
+// foreign key. Attachments are part of the entry's digest.
+model OplogAttachment {
+  id      String           @id @default(uuid())
+  entry   OperatorLogEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  entryId String
+  sha256  String           @db.Char(64)
+  label   String?
+
+  @@index([entryId])
+  @@index([sha256])
 }
