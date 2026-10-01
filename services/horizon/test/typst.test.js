@@ -6,7 +6,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { PDFDocument } from "pdf-lib";
-import { renderTypst, parseDiagnostics, TypstError } from "../src/renderers/typst.js";
+import { renderTypst, resolveTemplate, parseDiagnostics, TypstError, BUILTIN_TEMPLATES_DIR } from "../src/renderers/typst.js";
 import { buildFixture, fixtureNames } from "./fixtures/index.js";
 
 const typstBin = process.env.TYPST_BIN || "typst";
@@ -21,6 +21,16 @@ const skip = typstVersion ? false : `typst not found (set TYPST_BIN)`;
 let outputDir;
 before(() => { outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "horizon-typst-test-")); });
 after(() => fs.rmSync(outputDir, { recursive: true, force: true }));
+
+/** A throwaway templates directory: { "dir/file.typ": "source", ... }. */
+function templatesDir(files) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "horizon-templates-"));
+    for (const [file, source] of Object.entries(files)) {
+        fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+        fs.writeFileSync(path.join(dir, file), source);
+    }
+    return dir;
+}
 
 async function pages(name) {
     const pdf = await PDFDocument.load(fs.readFileSync(path.join(outputDir, name)));
@@ -52,31 +62,51 @@ describe(`typst renderer (${typstVersion ?? "not installed"})`, { skip }, () => 
     });
 
     test("a broken template raises TypstError with located diagnostics", async () => {
-        const templateDir = fs.mkdtempSync(path.join(os.tmpdir(), "horizon-typst-bad-"));
+        const dir = templatesDir({ "report/main.typ": "= Title\n#no-such-function()\n" });
         try {
-            fs.writeFileSync(path.join(templateDir, "main.typ"), "= Title\n#no-such-function()\n");
             const { payload } = buildFixture("minimal");
-            await assert.rejects(renderTypst({ payload, outputDir, typstBin, templateDir }), (err) => {
+            await assert.rejects(renderTypst({ payload, outputDir, typstBin, templatesDir: dir }), (err) => {
                 assert.ok(err instanceof TypstError);
                 assert.deepEqual(err.diagnostics[0], {
                     severity: "error", message: "unknown variable: no-such-function",
-                    file: "template/main.typ", line: 2, column: 1,
+                    file: "templates/report/main.typ", line: 2, column: 1,
                 });
                 return true;
             });
         } finally {
-            fs.rmSync(templateDir, { recursive: true, force: true });
+            fs.rmSync(dir, { recursive: true, force: true });
         }
     });
 
     test("the template cannot read outside its scratch directory", async () => {
-        const templateDir = fs.mkdtempSync(path.join(os.tmpdir(), "horizon-typst-escape-"));
+        const dir = templatesDir({ "report/main.typ": '#read("/../../../../etc/hostname")\n' });
         try {
-            fs.writeFileSync(path.join(templateDir, "main.typ"), '#read("/../../../../etc/hostname")\n');
             const { payload } = buildFixture("minimal");
-            await assert.rejects(renderTypst({ payload, outputDir, typstBin, templateDir }), TypstError);
+            await assert.rejects(renderTypst({ payload, outputDir, typstBin, templatesDir: dir }), TypstError);
         } finally {
-            fs.rmSync(templateDir, { recursive: true, force: true });
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("renders a template from another directory, importing a shared file", async () => {
+        // One page per finding, titled through a function from a sibling directory:
+        // proves the payload was read and the import resolved.
+        const dir = templatesDir({
+            "brand/lib.typ": "#let title(t) = heading(t)\n",
+            "per-finding/main.typ":
+                '#import "../brand/lib.typ": title\n' +
+                '#let data = json(sys.inputs.payload)\n' +
+                "#for (i, f) in data.findings.enumerate() {\n" +
+                "  if i > 0 { pagebreak() }\n" +
+                "  title(f.title)\n" +
+                "}\n",
+        });
+        try {
+            const { payload, assets } = buildFixture("kitchen-sink");
+            const name = await renderTypst({ payload, assets, outputDir, typstBin, templatesDir: dir, template: "per-finding" });
+            assert.equal(await pages(name), payload.findings.length);
+        } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
         }
     });
 });
@@ -91,12 +121,32 @@ test("a missing typst binary is reported as such", async () => {
 
 test("parseDiagnostics reads Typst's short format", () => {
     assert.deepEqual(parseDiagnostics(
-        "template/main.typ:3:1: error: unknown variable: foo\n" +
-        "template/prose.typ:10:5: warning: unused\n" +
+        "templates/report/main.typ:3:1: error: unknown variable: foo\n" +
+        "templates/report/prose.typ:10:5: warning: unused\n" +
         "error: file not found\n",
     ), [
-        { severity: "error", message: "unknown variable: foo", file: "template/main.typ", line: 3, column: 1 },
-        { severity: "warning", message: "unused", file: "template/prose.typ", line: 10, column: 5 },
+        { severity: "error", message: "unknown variable: foo", file: "templates/report/main.typ", line: 3, column: 1 },
+        { severity: "warning", message: "unused", file: "templates/report/prose.typ", line: 10, column: 5 },
         { severity: "error", message: "file not found", file: null, line: null, column: null },
     ]);
+});
+
+describe("resolveTemplate", () => {
+    test("finds the built-in report template", () => {
+        assert.equal(resolveTemplate(BUILTIN_TEMPLATES_DIR, "report"), path.join(BUILTIN_TEMPLATES_DIR, "report", "main.typ"));
+    });
+
+    test("rejects a name that is not a plain directory name", () => {
+        for (const name of ["../report", "a/b", "", "."]) {
+            assert.throws(() => resolveTemplate(BUILTIN_TEMPLATES_DIR, name), /template name/, name);
+        }
+    });
+
+    test("says which directory is missing", () => {
+        assert.throws(() => resolveTemplate("/nonexistent/templates", "report"), /templates directory not found: \/nonexistent\/templates/);
+    });
+
+    test("says which template is missing", () => {
+        assert.throws(() => resolveTemplate(BUILTIN_TEMPLATES_DIR, "nope"), /template "nope" not found/);
+    });
 });
