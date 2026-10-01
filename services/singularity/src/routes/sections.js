@@ -1,9 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import { Router } from "express";
 import { authenticateRequest } from "../middleware/authenticateRequest.js";
+import { EvidenceStore } from "../evidence/store.js";
+import { FINDING_IMAGES_INCLUDE, resolveSectionImages } from "../evidence/findingImages.js";
 
 const router = Router();
 const prisma = new PrismaClient();
+const store = new EvidenceStore();
 
 // POST /sections - Create and assign to report
 router.post("/", authenticateRequest, async (req, res) => {
@@ -121,14 +124,12 @@ router.put("/:id", authenticateRequest, async (req, res) => {
             data: filteredData,
             include: {
                 reportFinding: {
-                    include: {
-                        images: true
-                    }
+                    include: FINDING_IMAGES_INCLUDE
                 }
             }
         });
 
-        res.json(updated);
+        res.json(await resolveSectionImages(prisma, store, updated));
     } catch (err) {
         console.error("Failed to update section:", err);
         res.status(500).json({ error: "Failed to update section" });
@@ -145,14 +146,12 @@ router.get("/:reportId", authenticateRequest, async (req, res) => {
             orderBy: { createdAt: "desc" },
             include: {
                 reportFinding: {
-                    include: {
-                        images: true
-                    }
+                    include: FINDING_IMAGES_INCLUDE
                 },
             }
         });
 
-        res.json(sections);
+        res.json(await resolveSectionImages(prisma, store, sections));
     } catch (err) {
         console.error(`Failed to get sections for report ${reportId}:`, err.message);
         res.status(500).json({ error: "Failed to fetch sections for report" });

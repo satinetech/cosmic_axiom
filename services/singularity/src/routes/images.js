@@ -1,9 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import { Router } from "express";
 import { authenticateRequest } from "../middleware/authenticateRequest.js";
+import { EvidenceStore } from "../evidence/store.js";
+import { FINDING_IMAGES_INCLUDE, resolveFindingImages } from "../evidence/findingImages.js";
 
 const router = Router();
 const prisma = new PrismaClient();
+const store = new EvidenceStore();
 
 // POST /images - Add image to a finding
 router.post("/", authenticateRequest, async (req, res) => {
@@ -100,12 +103,12 @@ router.get("/finding/:findingId", authenticateRequest, async (req, res) => {
     const { findingId } = req.params;
 
     try {
-        const images = await prisma.findingImage.findMany({
-            where: { reportFindingId: findingId },
-            orderBy: { createdAt: "asc" }
+        const finding = await prisma.reportFinding.findUnique({
+            where: { id: findingId },
+            select: FINDING_IMAGES_INCLUDE,
         });
 
-        res.json(images);
+        res.json(finding ? (await resolveFindingImages(prisma, store, finding)).images : []);
     } catch (err) {
         console.error("Failed to fetch images:", err);
         res.status(500).json({ error: "Failed to fetch images" });

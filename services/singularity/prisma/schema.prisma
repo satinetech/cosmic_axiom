@@ -64,6 +64,7 @@ model ReportFinding {
   reportId       String
   sections       Section[]
   images         FindingImage[]  // 0 or more images associated with this finding
+  evidence       FindingEvidence[]
 
   title          String
   description    String         @db.Text
@@ -89,6 +90,79 @@ model FindingImage {
   mimeType         String         // e.g., "image/png", "image/jpeg"
 
   createdAt        DateTime       @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Evidence: content-addressed files, replacing FindingImage's base64 column.
+// ---------------------------------------------------------------------------
+
+// A file, identified by the sha256 of its bytes. The bytes live on disk under
+// EVIDENCE_ROOT (see src/evidence/store.js); only metadata is kept here, so a
+// screenshot costs a row, not megabytes of base64, and identical files are
+// stored once.
+model Evidence {
+  sha256   String @id @db.Char(64)
+  size     Int
+  mimeType String
+
+  // Set when this file is a redacted copy of another. The original is kept
+  // (and archived) but is never the one rendered.
+  redactedFromSha String?    @db.Char(64)
+  redactedFrom    Evidence?  @relation("Redaction", fields: [redactedFromSha], references: [sha256], onDelete: Restrict)
+  redactions      Evidence[] @relation("Redaction")
+
+  attachments   FindingEvidence[]
+  custodyEvents EvidenceCustodyEvent[]
+
+  createdAt DateTime @default(now())
+}
+
+// A file attached to a finding, with its own title, caption and position. The
+// same file can be attached to several findings.
+model FindingEvidence {
+  id              String        @id @default(uuid())
+  reportFinding   ReportFinding @relation(fields: [reportFindingId], references: [id], onDelete: Cascade)
+  reportFindingId String
+  evidence        Evidence      @relation(fields: [evidenceSha], references: [sha256], onDelete: Restrict)
+  evidenceSha     String        @db.Char(64)
+
+  title    String
+  caption  String @db.Text
+  position Int    @default(0)
+
+  // The FindingImage this was copied from, when it was. Unique, so copying
+  // existing images across can be re-run without duplicating them.
+  legacyImageId String? @unique
+
+  createdAt DateTime @default(now())
+
+  @@index([reportFindingId, position])
+}
+
+enum CustodyAction {
+  INGESTED
+  VERIFIED
+  ATTACHED
+  DETACHED
+  REDACTED
+  EXPORTED
+}
+
+// Append-only record of what happened to a file. observedSha is computed by
+// re-hashing the bytes on disk when the event is recorded -- never copied from
+// Evidence.sha256 -- so a file that has changed or vanished shows up as a
+// mismatch (or null) instead of being vouched for.
+model EvidenceCustodyEvent {
+  id          Int           @id @default(autoincrement())
+  evidence    Evidence      @relation(fields: [evidenceSha], references: [sha256], onDelete: Restrict)
+  evidenceSha String        @db.Char(64)
+  action      CustodyAction
+  observedSha String?       @db.Char(64)
+  actor       String?
+  detail      Json?
+  createdAt   DateTime      @default(now())
+
+  @@index([evidenceSha, id])
 }
 
 model DefaultReportTemplate {
