@@ -19,20 +19,39 @@ if (REPORT_RENDERER === "typst") {
     resolveTemplate(TYPST_TEMPLATES_DIR, TYPST_TEMPLATE);
 }
 
-async function generateTypstPdf({ report, engagement, existingFilename }) {
-    const { payload, assets } = buildPayload({ report, engagement });
+// Incident response reports exist only as a Typst template, whatever
+// REPORT_RENDERER says. A templates directory with its own "ir-report" brands
+// them too; otherwise the built-in one is used.
+const IR_TEMPLATE = "ir-report";
+const IR_TEMPLATES_DIR = hasTemplate(TYPST_TEMPLATES_DIR, IR_TEMPLATE) ? TYPST_TEMPLATES_DIR : BUILTIN_TEMPLATES_DIR;
+resolveTemplate(IR_TEMPLATES_DIR, IR_TEMPLATE);
+
+function hasTemplate(dir, name) {
+    try {
+        resolveTemplate(dir, name);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+const isIncidentResponse = (engagement) => engagement?.profile === "INCIDENT_RESPONSE";
+
+async function generateTypstPdf({ report, engagement, incident, existingFilename }) {
+    const { payload, assets } = buildPayload({ report, engagement, incident });
+    const ir = isIncidentResponse(engagement);
     return renderTypst({
         payload,
         assets,
         outputDir: path.resolve("generated"),
         filename: existingFilename,
-        templatesDir: TYPST_TEMPLATES_DIR,
-        template: TYPST_TEMPLATE,
+        templatesDir: ir ? IR_TEMPLATES_DIR : TYPST_TEMPLATES_DIR,
+        template: ir ? IR_TEMPLATE : TYPST_TEMPLATE,
     });
 }
 
 export const generatePdfReport = async (req, res) => {
-    const { report, engagement, existingFilename } = req.body;
+    const { report, engagement, incident, existingFilename } = req.body;
 
     if (!report || !engagement) {
         return res.status(400).json({ error: "Missing report, engagement, or sections data" });
@@ -40,8 +59,9 @@ export const generatePdfReport = async (req, res) => {
 
     try {
         // Step 1: Generate the PDF using provided data
-        const generate = REPORT_RENDERER === "typst" ? generateTypstPdf : generatePdf;
-        const filePath = await generate({ report, engagement, existingFilename });
+        const typst = REPORT_RENDERER === "typst" || isIncidentResponse(engagement);
+        const generate = typst ? generateTypstPdf : generatePdf;
+        const filePath = await generate({ report, engagement, incident, existingFilename });
 
         // Step 2: Return the path to the generated file
         res.status(200).json({ url: `/generated/${filePath}` });

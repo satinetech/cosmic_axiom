@@ -7,6 +7,7 @@ import os from "os";
 import path from "path";
 import { PDFDocument } from "pdf-lib";
 import { renderTypst, resolveTemplate, parseDiagnostics, TypstError, BUILTIN_TEMPLATES_DIR } from "../src/renderers/typst.js";
+import { buildPayload } from "../src/payload/buildPayload.js";
 import { buildFixture, fixtureNames } from "./fixtures/index.js";
 
 const typstBin = process.env.TYPST_BIN || "typst";
@@ -41,11 +42,42 @@ describe(`typst renderer (${typstVersion ?? "not installed"})`, { skip }, () => 
     for (const fixture of fixtureNames()) {
         test(`renders the ${fixture} fixture`, async () => {
             const { payload, assets } = buildFixture(fixture);
-            const name = await renderTypst({ payload, assets, outputDir, typstBin });
+            const template = payload.engagement.profile === "INCIDENT_RESPONSE" ? "ir-report" : "report";
+            const name = await renderTypst({ payload, assets, outputDir, typstBin, template });
             assert.match(name, /^[0-9a-f-]{36}\.pdf$/);
             assert.ok(await pages(name) >= 3, "title page, contents and at least one section");
         });
     }
+
+    test("the incident response template renders sparse records", async () => {
+        // Everything optional left out: no findings, no conclusion, records with
+        // only their required fields.
+        const input = JSON.parse(fs.readFileSync(new URL("./fixtures/minimal/request.json", import.meta.url), "utf8"));
+        input.engagement.profile = "INCIDENT_RESPONSE";
+        input.report.sections = [];
+        input.report.conclusion = null;
+        input.incident = {
+            timeline: [{ occurredAt: "2026-01-01T00:00:00Z", title: "Only a title" }],
+            indicators: [
+                { type: "OTHER", value: "x" },
+                { type: "URL", value: "https://example.com/" + "a".repeat(200), lastSeen: "2026-01-02T00:00:00Z" },
+            ],
+            assets: [{ kind: "OTHER", identifier: "thing" }],
+            decisions: [{ occurredAt: "2026-01-01T00:00:00Z" }],
+            actions: [{ occurredAt: "2026-01-01T00:00:00Z" }],
+        };
+        const { payload, assets } = buildPayload(input);
+        const name = await renderTypst({ payload, assets, outputDir, typstBin, template: "ir-report" });
+        assert.ok(await pages(name) >= 6, "title, contents, summary, timeline, assets, decisions, appendix");
+    });
+
+    test("the incident response template renders an incident with nothing recorded", async () => {
+        const input = JSON.parse(fs.readFileSync(new URL("./fixtures/minimal/request.json", import.meta.url), "utf8"));
+        input.engagement.profile = "INCIDENT_RESPONSE";
+        const { payload, assets } = buildPayload(input);
+        const name = await renderTypst({ payload, assets, outputDir, typstBin, template: "ir-report" });
+        assert.ok(await pages(name) >= 3);
+    });
 
     test("the same payload gives the same bytes", async () => {
         const { payload, assets } = buildFixture("kitchen-sink");
@@ -132,6 +164,10 @@ test("parseDiagnostics reads Typst's short format", () => {
 });
 
 describe("resolveTemplate", () => {
+    test("finds the built-in incident response template", () => {
+        assert.equal(resolveTemplate(BUILTIN_TEMPLATES_DIR, "ir-report"), path.join(BUILTIN_TEMPLATES_DIR, "ir-report", "main.typ"));
+    });
+
     test("finds the built-in report template", () => {
         assert.equal(resolveTemplate(BUILTIN_TEMPLATES_DIR, "report"), path.join(BUILTIN_TEMPLATES_DIR, "report", "main.typ"));
     });

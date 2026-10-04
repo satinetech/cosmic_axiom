@@ -1,6 +1,8 @@
-// Golden page images for the Typst template.
+// Golden page images for the Typst templates.
 //
-// Each fixture in test/fixtures is compiled with templates/typst/report and
+// Each fixture in test/fixtures is compiled with the template horizon would
+// pick for it (templates/typst/ir-report for incident response, else
+// templates/typst/report) and
 // every page is rendered to PNG. The committed PNGs are the expected output:
 // a template change shows up in review as an image diff, page by page.
 //
@@ -42,6 +44,8 @@ export function goldenTypstVersion() {
  * Returns the directory; the caller removes it.
  */
 export function renderPages(fixture) {
+    const payload = JSON.parse(fs.readFileSync(path.join(HORIZON_DIR, "test/fixtures", fixture, "payload.json"), "utf8"));
+    const template = payload.engagement.profile === "INCIDENT_RESPONSE" ? "ir-report" : "report";
     const out = fs.mkdtempSync(path.join(os.tmpdir(), `horizon-golden-${fixture}-`));
     execFileSync(typstBin(), [
         "compile",
@@ -51,7 +55,7 @@ export function renderPages(fixture) {
         "--input", `payload=/test/fixtures/${fixture}/payload.json`,
         "--format", "png",
         "--ppi", String(PPI),
-        path.join(HORIZON_DIR, "templates/typst/report/main.typ"),
+        path.join(HORIZON_DIR, "templates/typst", template, "main.typ"),
         path.join(out, "page-{0p}.png"),
     ], { stdio: ["ignore", "ignore", "pipe"] });
     return out;

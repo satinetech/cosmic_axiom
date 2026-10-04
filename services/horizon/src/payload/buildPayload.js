@@ -41,11 +41,11 @@ export class PayloadError extends Error {
 }
 
 /**
- * @param {{ report: object, engagement: object }} input  the /generate request body
+ * @param {{ report: object, engagement: object, incident?: object }} input  the /generate request body
  * @param {{ now?: Date }} [options]  `now` fixes generatedAt, for reproducible output
  * @returns {{ payload: object, assets: Array<{ path: string, mimeType: string, data: Buffer }> }}
  */
-export function buildPayload({ report, engagement }, { now = new Date() } = {}) {
+export function buildPayload({ report, engagement, incident }, { now = new Date() } = {}) {
     if (!isObject(report)) throw new PayloadError("report", "is required");
     if (!isObject(engagement)) throw new PayloadError("engagement", "is required");
 
@@ -92,7 +92,13 @@ export function buildPayload({ report, engagement }, { now = new Date() } = {}) 
         engagement: buildEngagement(engagement),
         sections,
         findings,
+        incident: null,
     };
+    // An incident-response engagement always has the block, empty if nothing
+    // was sent, so its template can rely on it; other profiles never do.
+    if (payload.engagement.profile === "INCIDENT_RESPONSE") {
+        payload.incident = buildIncident(isObject(incident) ? incident : {});
+    }
 
     return { payload, assets };
 }
@@ -113,6 +119,7 @@ function buildEngagement(engagement) {
     return {
         id: String(engagement.id ?? ""),
         name: text(engagement.name) ?? "",
+        profile: oneOf(engagement.profile ?? "PENTEST", PROFILES, "engagement.profile"),
         type: text(engagement.type),
         methodology: text(engagement.methodology),
         status: text(engagement.status),
@@ -173,6 +180,71 @@ function buildImage(image, findingId, at, assets) {
     assets.push({ path, mimeType, data });
 
     return { id: String(image.id ?? ""), title: text(image.title), caption: text(image.caption), path };
+}
+
+const PROFILES = ["PENTEST", "INCIDENT_RESPONSE"];
+const CONFIDENCE = ["CONFIRMED", "LIKELY", "POSSIBLE"];
+const INDICATOR_TYPES = ["IP", "DOMAIN", "URL", "EMAIL", "HASH_MD5", "HASH_SHA1", "HASH_SHA256", "FILE_NAME", "ACCOUNT", "OTHER"];
+const ASSET_KINDS = ["HOST", "ACCOUNT", "MAILBOX", "APPLICATION", "CLOUD_RESOURCE", "NETWORK", "OTHER"];
+const COMPROMISE_STATUS = ["CONFIRMED_COMPROMISED", "SUSPECTED", "CONTAINED", "REMEDIATED", "NOT_AFFECTED"];
+
+function oneOf(value, allowed, at) {
+    if (!allowed.includes(value)) throw new PayloadError(at, `must be one of ${allowed.join(", ")}, not ${JSON.stringify(value)}`);
+    return value;
+}
+
+const byTime = (field) => (a, b) => (a[field] ?? "").localeCompare(b[field] ?? "");
+
+/**
+ * The incident-response block: what the attacker did (timeline), what to look
+ * for (indicators), what was touched (assets), and what the team decided and
+ * did. Lists arrive as forge stores them; each is normalised and checked.
+ */
+function buildIncident(incident) {
+    const each = (key, fn) => list(incident[key]).filter(isObject).map((item, i) => fn(item, `incident.${key}[${i}]`));
+    return {
+        timeline: each("timeline", (e, at) => ({
+            occurredAt: required(date(e.occurredAt, `${at}.occurredAt`), `${at}.occurredAt`),
+            title: text(e.title) ?? "",
+            detail: prose(e.detail),
+            source: text(e.source),
+            confidence: oneOf(e.confidence ?? "LIKELY", CONFIDENCE, `${at}.confidence`),
+            tactic: text(e.tactic),
+        })).sort(byTime("occurredAt")),
+        indicators: each("indicators", (x, at) => ({
+            type: oneOf(x.type, INDICATOR_TYPES, `${at}.type`),
+            value: text(x.value) ?? "",
+            confidence: oneOf(x.confidence ?? "LIKELY", CONFIDENCE, `${at}.confidence`),
+            firstSeen: date(x.firstSeen, `${at}.firstSeen`),
+            lastSeen: date(x.lastSeen, `${at}.lastSeen`),
+            description: text(x.description),
+        })),
+        assets: each("assets", (a, at) => ({
+            kind: oneOf(a.kind, ASSET_KINDS, `${at}.kind`),
+            identifier: text(a.identifier) ?? "",
+            status: oneOf(a.status ?? "SUSPECTED", COMPROMISE_STATUS, `${at}.status`),
+            firstCompromisedAt: date(a.firstCompromisedAt, `${at}.firstCompromisedAt`),
+            containedAt: date(a.containedAt, `${at}.containedAt`),
+            description: text(a.description),
+        })).sort((a, b) => COMPROMISE_STATUS.indexOf(a.status) - COMPROMISE_STATUS.indexOf(b.status)),
+        decisions: each("decisions", (d, at) => ({
+            occurredAt: required(date(d.occurredAt, `${at}.occurredAt`), `${at}.occurredAt`),
+            summary: prose(d.summary),
+            approvedBy: text(d.approvedBy),
+            operator: text(d.operator),
+        })).sort(byTime("occurredAt")),
+        actions: each("actions", (a, at) => ({
+            occurredAt: required(date(a.occurredAt, `${at}.occurredAt`), `${at}.occurredAt`),
+            summary: prose(a.summary),
+            operator: text(a.operator),
+            targetAddress: text(a.targetAddress),
+        })).sort(byTime("occurredAt")),
+    };
+}
+
+function required(value, at) {
+    if (value === null || value === undefined) throw new PayloadError(at, "is required");
+    return value;
 }
 
 /** Sections in the order the report writer shows them: position, then creation time. */
