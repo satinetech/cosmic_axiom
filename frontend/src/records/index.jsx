@@ -1,3 +1,5 @@
+import { INDICATOR_TYPES, IndicatorTools } from "./indicatorTools";
+
 /**
  * Engagement record kinds -- the incident-response modules (timeline,
  * indicators, ...). Each declares its form fields and table columns once;
@@ -35,5 +37,21 @@ export const RECORD_TYPES = {
             { name: "detail", label: "Detail", type: "text" },
         ],
         columns: ["occurredAt", "title", "tactic", "confidence", "source"],
+    },
+    indicators: {
+        path: "indicators",
+        title: "Indicators",
+        noun: "indicator",
+        intro: "Indicators of compromise: what to block, hunt for and hand to the client. Values are stored normalised, so the same indicator is never recorded twice.",
+        fields: [
+            { name: "type", label: "Type", type: "enum", options: INDICATOR_TYPES, required: true, default: "IP" },
+            { name: "value", label: "Value", type: "string", required: true, wide: true, mono: true, placeholder: "e.g. 203.0.113.7, evil[.]example, a SHA-256" },
+            { name: "confidence", label: "Confidence", type: "enum", options: CONFIDENCE, default: "LIKELY", required: true },
+            { name: "firstSeen", label: "First seen (UTC)", type: "datetime" },
+            { name: "lastSeen", label: "Last seen (UTC)", type: "datetime" },
+            { name: "description", label: "Notes", type: "text" },
+        ],
+        columns: ["type", "value", "confidence", "firstSeen", "lastSeen", "description"],
+        actions: (props) => <IndicatorTools {...props} />,
     },
 };

@@ -151,8 +151,8 @@ function RecordsTab({ engagementId, config }) {
                     <h2 className="font-medium text-gray-900 dark:text-white">{config.title} ({records.length})</h2>
                     {config.intro && <p className="text-sm text-gray-500 dark:text-gray-400 max-w-3xl">{config.intro}</p>}
                 </div>
-                <div className="flex gap-2">
-                    {config.actions?.(records, load)}
+                <div className="flex flex-wrap gap-2 justify-end">
+                    {config.actions?.({ records, reload: load, engagementId, api })}
                     <button onClick={startNew} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700">
                         <Plus size={14} /> Add {config.noun}
                     </button>
