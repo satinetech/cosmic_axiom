@@ -21,7 +21,8 @@ const NewFindingModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                 description: initialData.description || "",
                 impact: initialData.impact || "",
                 recommendation: initialData.recommendation || "",
-                tags: initialData.tags || ""
+                // Stored as a list; the field edits it as comma-separated text.
+                tags: Array.isArray(initialData.tags) ? initialData.tags.join(", ") : (initialData.tags || "")
             });
         }
     }, [initialData]);
@@ -31,13 +32,25 @@ const NewFindingModal = ({ isOpen, onClose, onSave, initialData = null }) => {
         setFormData({ ...formData, [name]: value });
     };
 
-    const handleSubmit = (e) => {
+    const [error, setError] = useState(null);
+    const [saving, setSaving] = useState(false);
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const formattedData = {
             ...formData,
-            tags: formData.tags.split(",").map((t) => t.trim()).filter(Boolean)
+            tags: String(formData.tags || "").split(",").map((t) => t.trim()).filter(Boolean)
         };
-        onSave(formattedData);
+        // Wait for the save: if it is refused, stay open with the reason
+        // rather than closing as though it worked.
+        setSaving(true);
+        setError(null);
+        const result = await onSave(formattedData);
+        setSaving(false);
+        if (result?.error) {
+            setError(result.error);
+            return;
+        }
         onClose();
         // Reset form data
         setFormData({
@@ -59,7 +72,7 @@ const NewFindingModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                 <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">New Finding</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-gray-700 dark:text-gray-300 mb-2">Title</label>
+                        <label className="block text-gray-700 dark:text-gray-300 mb-2">Title <span className="text-red-500">*</span></label>
                         <input
                             type="text"
                             name="title"
@@ -71,7 +84,7 @@ const NewFindingModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                     </div>
 
                     <div>
-                        <label className="block text-gray-700 dark:text-gray-300 mb-2">Severity</label>
+                        <label className="block text-gray-700 dark:text-gray-300 mb-2">Severity <span className="text-red-500">*</span></label>
                         <select
                             name="severity"
                             value={formData.severity}
@@ -97,22 +110,24 @@ const NewFindingModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                     </div>
 
                     <div>
-                        <label className="block text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                        <label className="block text-gray-700 dark:text-gray-300 mb-2">Description <span className="text-red-500">*</span></label>
                         <textarea
                             name="description"
                             value={formData.description}
                             onChange={handleChange}
+                            required
                             className="w-full p-2 rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
                             rows="3"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-gray-700 dark:text-gray-300 mb-2">Impact</label>
+                        <label className="block text-gray-700 dark:text-gray-300 mb-2">Impact <span className="text-red-500">*</span></label>
                         <textarea
                             name="impact"
                             value={formData.impact}
                             onChange={handleChange}
+                            required
                             className="w-full p-2 rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
                             rows="3"
                             placeholder="Describe the potential impact if this vulnerability is exploited"
@@ -120,11 +135,12 @@ const NewFindingModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                     </div>
 
                     <div>
-                        <label className="block text-gray-700 dark:text-gray-300 mb-2">Recommendation</label>
+                        <label className="block text-gray-700 dark:text-gray-300 mb-2">Recommendation <span className="text-red-500">*</span></label>
                         <textarea
                             name="recommendation"
                             value={formData.recommendation}
                             onChange={handleChange}
+                            required
                             className="w-full p-2 rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
                             rows="3"
                         />
@@ -142,11 +158,14 @@ const NewFindingModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                         />
                     </div>
 
+                    {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+
                     <div className="flex justify-end gap-4">
                         <button 
                             type="button" 
                             onClick={() => {
                                 onClose();
+                                setError(null);
                                 // Reset form when canceling
                                 setFormData({
                                     title: "",
@@ -162,8 +181,8 @@ const NewFindingModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                         >
                             Cancel
                         </button>
-                        <button type="submit" className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded">
-                            Save
+                        <button type="submit" disabled={saving} className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded disabled:opacity-50">
+                            {saving ? "Saving..." : "Save"}
                         </button>
                     </div>
                 </form>
