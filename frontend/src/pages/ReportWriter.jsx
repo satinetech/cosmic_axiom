@@ -190,15 +190,22 @@ function ReportWriter() {
                 await loadFindingImages(section.reportFinding.id);
             }
 
+            // A list only if the request worked: an error body stored here would
+            // replace the list, and the page's .filter calls would blank it.
+            const listFrom = async (res, what) => {
+                const data = await res.json().catch(() => null);
+                if (res.ok && Array.isArray(data)) return data;
+                console.error(`Failed to load ${what}:`, res.status, data);
+                return [];
+            };
+
             const findingRes = await fetch(`${import.meta.env.VITE_SATELLITE_URL}/findings`, { headers });
-            const findingTemplates = await findingRes.json();
-            setFindings(findingTemplates);
+            setFindings(await listFrom(findingRes, "the finding library"));
 
             // Load scopes for the engagement
             if (engagementData?.id) {
                 const scopeRes = await fetch(`${import.meta.env.VITE_SATELLITE_URL}/scope/engagement/${engagementData.id}`, { headers });
-                const scopeData = await scopeRes.json();
-                setScopes(scopeData);
+                setScopes(await listFrom(scopeRes, "the engagement's scope"));
             }
         } catch (err) {
             console.error("Failed to load data:", err);
