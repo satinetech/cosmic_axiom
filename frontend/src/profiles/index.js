@@ -22,7 +22,7 @@ export const PROFILES = {
         key: "INCIDENT_RESPONSE",
         label: "Incident response",
         usesTestingType: false,
-        tabs: ["overview", "findings", "log", "report"],
+        tabs: ["overview", "timeline", "findings", "log", "report"],
     },
 };
 
@@ -31,6 +31,7 @@ export const DEFAULT_PROFILE = "PENTEST";
 /** Every tab an engagement home page can show; a profile picks from these. */
 export const TABS = {
     overview: { label: "Overview" },
+    timeline: { label: "Timeline", records: "timeline" },
     scope: { label: "Scope" },
     findings: { label: "Findings & evidence" },
     log: { label: "Operator log" },
