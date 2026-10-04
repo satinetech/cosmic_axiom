@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { DEFAULT_PROFILE, PROFILES, profileOf } from "../profiles";
 const statusOptions = [
     { value: "PLANNED", label: "Planned" },
     { value: "ACTIVE", label: "Active" },
@@ -48,6 +49,7 @@ const NewEngagementModal = ({ isOpen, onClose, onSave, customers = [], initialDa
         startDate: "",
         endDate: "",
         status: "PLANNED",
+        profile: DEFAULT_PROFILE,
         type: "NETWORK_PENTEST",
         methodology: "BLACK_BOX",
         riskTolerance: "MEDIUM",
@@ -70,6 +72,7 @@ const NewEngagementModal = ({ isOpen, onClose, onSave, customers = [], initialDa
                     startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : "",
                     endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : "",
                     status: initialData.status || "PLANNED",
+                    profile: initialData.profile || DEFAULT_PROFILE,
                     type: initialData.type || "NETWORK_PENTEST",
                     methodology: initialData.methodology || "BLACK_BOX",
                     riskTolerance: initialData.riskTolerance || "MEDIUM",
@@ -89,6 +92,7 @@ const NewEngagementModal = ({ isOpen, onClose, onSave, customers = [], initialDa
                     startDate: "",
                     endDate: "",
                     status: "PLANNED",
+                    profile: DEFAULT_PROFILE,
                     type: "NETWORK_PENTEST",
                     methodology: "BLACK_BOX",
                     riskTolerance: "MEDIUM",
@@ -253,6 +257,23 @@ const NewEngagementModal = ({ isOpen, onClose, onSave, customers = [], initialDa
                         </select>
                     </div>
 
+                    <div>
+                        <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Kind of engagement</label>
+                        <select
+                            name="profile"
+                            value={form.profile}
+                            onChange={handleChange}
+                            className="w-full p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                        >
+                            {Object.values(PROFILES).map((profile) => (
+                                <option key={profile.key} value={profile.key}>
+                                    {profile.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {profileOf(form).usesTestingType && (
                     <div className="flex gap-4">
                         <div className="flex-1">
                             <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Engagement Type</label>
@@ -285,6 +306,7 @@ const NewEngagementModal = ({ isOpen, onClose, onSave, customers = [], initialDa
                             </select>
                         </div>
                     </div>
+                    )}
 
                     <div>
                         <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Risk Tolerance</label>
