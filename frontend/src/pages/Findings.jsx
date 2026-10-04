@@ -34,39 +34,38 @@ const Findings = () => {
         fetchFindings();
     }, [token]);
 
+    // Returns { error } when the save is refused, so the dialog can stay open
+    // and say why; nothing is added to the list unless it was actually saved.
     const handleSaveFinding = async (findingData) => {
         try {
-            if (editingFinding) {
-                // Update existing finding
-                const response = await fetch(`${import.meta.env.VITE_SATELLITE_URL}/findings/${editingFinding.id}`, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
+            const response = editingFinding
+                // Updates go to POST /findings/update with the id in the body:
+                // that is the route satellite and library provide.
+                ? await fetch(`${import.meta.env.VITE_SATELLITE_URL}/findings/update`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ ...findingData, id: editingFinding.id }),
+                })
+                : await fetch(`${import.meta.env.VITE_SATELLITE_URL}/findings`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                     body: JSON.stringify(findingData),
                 });
-
-                const updated = await response.json();
-                setFindings((prev) => prev.map(f => f.id === editingFinding.id ? updated : f));
+            const saved = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                return { error: saved.error || `The finding could not be saved (${response.status}).` };
+            }
+            if (editingFinding) {
+                setFindings((prev) => prev.map(f => f.id === editingFinding.id ? saved : f));
                 setEditingFinding(null);
             } else {
-                // Create new finding
-                const response = await fetch(`${import.meta.env.VITE_SATELLITE_URL}/findings`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify(findingData),
-                });
-
-                const created = await response.json();
-                setFindings((prev) => [created, ...prev]);
+                setFindings((prev) => [saved, ...prev]);
             }
             setIsModalOpen(false);
+            return {};
         } catch (err) {
             console.error("Failed to save finding", err);
+            return { error: "The finding could not be saved. Check your connection and try again." };
         }
     };
 
@@ -118,6 +117,8 @@ const Findings = () => {
     };
 
     const severityCounts = Array.isArray(findings) ? findings.reduce((acc, f) => {
+        // One malformed row must not blank the whole page.
+        if (typeof f?.severity !== "string" || !f.severity) return acc;
         const key = f.severity.charAt(0).toUpperCase() + f.severity.slice(1).toLowerCase();
         acc[key] = (acc[key] || 0) + 1;
         return acc;
@@ -171,7 +172,7 @@ const Findings = () => {
                 <div>
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Findings Library</h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Manage security findings and templates ({filteredFindings.length} total)
+                        Reusable finding templates ({filteredFindings.length} total). To add screenshots, add the finding to a report and use Manage Images in the Report Writer.
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
