@@ -30,6 +30,7 @@ describe("parseSeed", () => {
             [{ engagement: { name: "x" } }, "engagement.startDate"],
             [{ engagement: { name: "x", startDate: "soon" } }, "engagement.startDate"],
             [{ engagement: { name: "x", startDate: "2026-10-01", type: "PIZZA" } }, "engagement.type"],
+            [{ engagement: { name: "x", startDate: "2026-10-01", profile: "FORENSICS" } }, "engagement.profile"],
             [{ scope: "10.0.0.1" }, "scope"],
             [{ scope: [{ address: "" }] }, "scope[0].address"],
             [{ scope: [{ address: "a", inScope: "yes" }] }, "scope[0].inScope"],
@@ -72,6 +73,13 @@ describe("seedEngagement, in MySQL", { skip: url ? false : "TEST_DATABASE_URL no
         assert.deepEqual(again, { engagementId: first.engagementId, created: false });
         assert.equal((await db.engagement.findUnique({ where: { id: first.engagementId } })).name, "Renamed by a person");
         assert.equal(await db.scope.count(), 2);
+    });
+
+    test("sets the profile, defaulting to a pentest", async () => {
+        const ir = await seedEngagement(db, doc({ externalRef: "IR-1", engagement: { name: "IR", startDate: "2026-10-01", profile: "INCIDENT_RESPONSE" } }));
+        const pt = await seedEngagement(db, doc({ externalRef: "PT-1" }));
+        assert.equal((await db.engagement.findUnique({ where: { id: ir.engagementId } })).profile, "INCIDENT_RESPONSE");
+        assert.equal((await db.engagement.findUnique({ where: { id: pt.engagementId } })).profile, "PENTEST");
     });
 
     test("reuses a customer with the same name", async () => {

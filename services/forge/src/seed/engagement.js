@@ -6,7 +6,7 @@
  *     "externalRef": "CASE-1234",                       required, unique
  *     "customer":   { "name": "Example Corp" },          required; reused if one has this name
  *     "engagement": { "name": "...", "startDate": "2026-10-01", required
- *                     "endDate", "description", "status", "type", "methodology" },
+ *                     "endDate", "description", "profile", "status", "type", "methodology" },
  *     "scope": [ { "address": "10.0.0.0/24", "inScope": true,
  *                  "description", "notes", "assetType", "environment", "criticality" } ]
  *   }
@@ -16,7 +16,7 @@
  * returned. Validation happens before anything is written.
  */
 
-import { AssetCriticality, AssetEnvironment, AssetType, EngagementStatus, EngagementType, TestingMethodology } from "@prisma/client";
+import { AssetCriticality, AssetEnvironment, AssetType, EngagementProfile, EngagementStatus, EngagementType, TestingMethodology } from "@prisma/client";
 
 export class SeedError extends Error {
     constructor(field, message) {
@@ -66,6 +66,7 @@ export function parseSeed(doc) {
             description: text(e.description, "engagement.description"),
             startDate: date(e.startDate, "engagement.startDate", { required: true }),
             endDate: date(e.endDate, "engagement.endDate"),
+            profile: oneOf(e.profile, EngagementProfile, "engagement.profile"),
             status: oneOf(e.status, EngagementStatus, "engagement.status"),
             type: oneOf(e.type, EngagementType, "engagement.type"),
             methodology: oneOf(e.methodology, TestingMethodology, "engagement.methodology"),
