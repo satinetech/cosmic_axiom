@@ -15,6 +15,7 @@ import MicroservicesTraining from './pages/MicroservicesTraining';
 import RoEBuilder from './pages/RoEBuilder';
 import RoEList from './pages/RoEList';
 import OperatorLog from './pages/OperatorLog';
+import EngagementHome from './pages/EngagementHome';
 import RoEDetails from './pages/RoEDetails';
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
         <Route path="/customers" element={<PrivateRoute><Customers /></PrivateRoute>} />
         <Route path="/report-writer/:reportId" element={<PrivateRoute><ReportWriter /></PrivateRoute>} />
         <Route path="/roe" element={<PrivateRoute><RoEList /></PrivateRoute>} />
+        <Route path="/engagements/:engagementId" element={<PrivateRoute><DashboardLayout><EngagementHome /></DashboardLayout></PrivateRoute>} />
         <Route path="/engagements/:engagementId/log" element={<PrivateRoute><DashboardLayout><OperatorLog /></DashboardLayout></PrivateRoute>} />
         <Route path="/engagements/:engagementId/roe" element={<PrivateRoute><DashboardLayout><RoEList /></DashboardLayout></PrivateRoute>} />
         <Route path="/engagements/:engagementId/roe/:roeId" element={<PrivateRoute><DashboardLayout><RoEBuilder /></DashboardLayout></PrivateRoute>} />
