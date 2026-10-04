@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 
+import { customerName } from "../utils/customerName";
 function ReportDetails() {
     const { reportid } = useParams();
     const navigate = useNavigate();
@@ -239,7 +240,7 @@ function ReportDetails() {
                             <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                                 <span className="flex items-center gap-1">
                                     <Building2 className="w-4 h-4" />
-                                    {report.engagement?.customer || 'No Customer'}
+                                    {customerName(report.engagement) || 'No Customer'}
                                 </span>
                                 <span className="flex items-center gap-1">
                                     <User className="w-4 h-4" />

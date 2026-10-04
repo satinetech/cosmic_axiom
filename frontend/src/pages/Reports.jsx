@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 
+import { customerName } from "../utils/customerName";
 function Reports() {
     const [reports, setReports] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
@@ -88,7 +89,7 @@ function Reports() {
     const filteredReports = reports.filter((report) => {
         const title = report.title ?? "";
         const engagementName = report.engagement?.name ?? "";
-        const customer = report.engagement?.customer ?? "";
+        const customer = customerName(report.engagement);
 
         const query = searchQuery.toLowerCase();
         return (
@@ -203,7 +204,7 @@ function Reports() {
                                         <Building2 className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                                                {report.engagement?.customer || "No Customer"}
+                                                {customerName(report.engagement) || "No Customer"}
                                             </p>
                                             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                                 {report.engagement?.name || "No Engagement"}
