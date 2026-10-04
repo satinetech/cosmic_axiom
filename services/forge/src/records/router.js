@@ -23,10 +23,12 @@ import { FieldError, readFields } from "./fields.js";
  * @param {string} options.path    URL segment, e.g. "timeline"
  * @param {object} options.fields  { name: { type, required?, max?, values?, default? } }
  * @param {object|object[]} options.orderBy
- * @param {(data: object) => void} [options.check]  cross-field checks; throw FieldError
+ * @param {(data: object, current?: object) => object} [options.prepare]
+ *   normalise and cross-check a record; return the fields to write, throw
+ *   FieldError to refuse. `current` is the stored record on an update.
  * @param {string} [options.duplicate]  the 409 message for a unique-constraint clash
  */
-export function recordsRouter({ prisma, model, path, fields, orderBy, check = () => {}, duplicate }) {
+export function recordsRouter({ prisma, model, path, fields, orderBy, prepare = (data) => data, duplicate }) {
     const router = Router();
     const db = prisma[model];
     const operatorOf = (req) => req.tokenPayload?.payload?.sub ?? null;
@@ -52,8 +54,7 @@ export function recordsRouter({ prisma, model, path, fields, orderBy, check = ()
 
     router.post(`/:engagementId/${path}`, authenticateRequest, async (req, res) => {
         try {
-            const data = readFields(fields, req.body);
-            check(data);
+            const data = prepare(readFields(fields, req.body));
             const engagement = await prisma.engagement.findUnique({ where: { id: req.params.engagementId }, select: { id: true } });
             if (!engagement) return res.status(404).json({ error: "Engagement not found" });
             const created = await db.create({ data: { ...data, engagementId: engagement.id, createdBy: operatorOf(req) } });
@@ -68,8 +69,11 @@ export function recordsRouter({ prisma, model, path, fields, orderBy, check = ()
             const data = readFields(fields, req.body, { partial: true });
             if (!(await owned(req))) return res.status(404).json({ error: "Not found" });
             const current = await db.findUnique({ where: { id: req.params.id } });
-            check({ ...current, ...data });
-            res.json(await db.update({ where: { id: req.params.id }, data }));
+            const prepared = prepare({ ...current, ...data }, current);
+            // Write what was sent, as prepared -- plus anything prepare derived.
+            const patch = Object.fromEntries(Object.entries(prepared).filter(([k, v]) => k in data || v !== current[k]));
+            delete patch.id; delete patch.engagementId; delete patch.createdAt; delete patch.updatedAt; delete patch.createdBy;
+            res.json(await db.update({ where: { id: req.params.id }, data: patch }));
         } catch (err) {
             fail(res, err, "update");
         }

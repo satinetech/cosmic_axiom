@@ -76,6 +76,7 @@ model Engagement {
   testingParameters TestingParameters?
   logEntries   OperatorLogEntry[]
   timeline     TimelineEvent[]
+  indicators   Indicator[]
 }
 
 model Scope {
@@ -339,4 +340,39 @@ model TimelineEvent {
   updatedAt    DateTime   @updatedAt
 
   @@index([engagementId, occurredAt])
+}
+
+enum IndicatorType {
+  IP
+  DOMAIN
+  URL
+  EMAIL
+  HASH_MD5
+  HASH_SHA1
+  HASH_SHA256
+  FILE_NAME
+  ACCOUNT
+  OTHER
+}
+
+// An indicator of compromise. Values are stored normalised -- refanged
+// ("hxxp://evil[.]com" -> "http://evil.com"), hashes and domains lowercased --
+// so the same indicator cannot be recorded twice under two spellings.
+model Indicator {
+  id           String        @id @default(uuid())
+  engagement   Engagement    @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  engagementId String
+
+  type         IndicatorType
+  value        String        @db.VarChar(512)
+  description  String?       @db.Text
+  firstSeen    DateTime?     @db.DateTime(3)
+  lastSeen     DateTime?     @db.DateTime(3)
+  confidence   Confidence    @default(LIKELY)
+
+  createdBy    String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([engagementId, type, value])
 }

@@ -22,7 +22,7 @@ export const PROFILES = {
         key: "INCIDENT_RESPONSE",
         label: "Incident response",
         usesTestingType: false,
-        tabs: ["overview", "timeline", "findings", "log", "report"],
+        tabs: ["overview", "timeline", "indicators", "findings", "log", "report"],
     },
 };
 
@@ -32,6 +32,7 @@ export const DEFAULT_PROFILE = "PENTEST";
 export const TABS = {
     overview: { label: "Overview" },
     timeline: { label: "Timeline", records: "timeline" },
+    indicators: { label: "Indicators", records: "indicators" },
     scope: { label: "Scope" },
     findings: { label: "Findings & evidence" },
     log: { label: "Operator log" },
