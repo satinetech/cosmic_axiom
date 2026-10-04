@@ -22,6 +22,32 @@ export const TACTICS = [
     "Collection", "Command and Control", "Exfiltration", "Impact",
 ].map((t) => ({ value: t, label: t }));
 
+export const ASSET_KINDS = [
+    { value: "HOST", label: "Host" },
+    { value: "ACCOUNT", label: "Account" },
+    { value: "MAILBOX", label: "Mailbox" },
+    { value: "APPLICATION", label: "Application" },
+    { value: "CLOUD_RESOURCE", label: "Cloud resource" },
+    { value: "NETWORK", label: "Network" },
+    { value: "OTHER", label: "Other" },
+];
+
+export const COMPROMISE_STATUS = [
+    { value: "CONFIRMED_COMPROMISED", label: "Compromised" },
+    { value: "SUSPECTED", label: "Suspected" },
+    { value: "CONTAINED", label: "Contained" },
+    { value: "REMEDIATED", label: "Remediated" },
+    { value: "NOT_AFFECTED", label: "Not affected" },
+];
+
+const STATUS_BADGES = {
+    CONFIRMED_COMPROMISED: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+    SUSPECTED: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+    CONTAINED: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+    REMEDIATED: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+    NOT_AFFECTED: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
+};
+
 export const RECORD_TYPES = {
     timeline: {
         path: "timeline",
@@ -53,5 +79,27 @@ export const RECORD_TYPES = {
         ],
         columns: ["type", "value", "confidence", "firstSeen", "lastSeen", "description"],
         actions: (props) => <IndicatorTools {...props} />,
+    },
+    assets: {
+        path: "assets",
+        title: "Affected assets",
+        noun: "asset",
+        intro: "Hosts, accounts, mailboxes and applications the incident touched or may have, and where each stands. Worst first.",
+        fields: [
+            { name: "kind", label: "Kind", type: "enum", options: ASSET_KINDS, required: true, default: "HOST" },
+            { name: "identifier", label: "Identifier", type: "string", required: true, wide: true, mono: true, placeholder: "e.g. FIN-LAPTOP-07, jsmith@example.com" },
+            { name: "status", label: "Status", type: "enum", options: COMPROMISE_STATUS, required: true, default: "SUSPECTED" },
+            { name: "firstCompromisedAt", label: "First compromised (UTC)", type: "datetime" },
+            { name: "containedAt", label: "Contained (UTC)", type: "datetime" },
+            { name: "description", label: "Notes", type: "text" },
+        ],
+        columns: ["status", "kind", "identifier", "firstCompromisedAt", "containedAt", "description"],
+        cells: {
+            status: (value) => (
+                <span className={`px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${STATUS_BADGES[value] || ""}`}>
+                    {COMPROMISE_STATUS.find((o) => o.value === value)?.label ?? value}
+                </span>
+            ),
+        },
     },
 };
