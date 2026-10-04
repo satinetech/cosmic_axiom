@@ -723,6 +723,28 @@ function ReportWriter() {
             return obj;
         };
 
+        // A finding's attached images, as the generated report shows them. Kept
+        // apart from templateData: titles and captions are escaped here, and an
+        // image is embedded only if its type is image/* and its data is plain
+        // base64, so nothing it carries can break out of the attribute.
+        const previewImages = (findingId) => {
+            const images = (findingImages[findingId] || []).filter(img =>
+                /^image\/[a-z0-9.+-]+$/i.test(img.mimeType || '') &&
+                /^[A-Za-z0-9+/]+=*$/.test(img.imageData || ''));
+            if (images.length === 0) return '';
+            return `
+        <div class="mb-6">
+          <h4 class="font-semibold text-base mb-2 text-gray-800">Evidence</h4>
+          ${images.map(img => `
+          <figure class="mb-4">
+            <img src="data:${img.mimeType};base64,${img.imageData}" alt="${escapeHtml(img.title)}" style="max-width: 100%; border: 1px solid #e5e7eb;" />
+            <figcaption class="text-sm text-gray-600 mt-1">
+              ${img.title ? `<strong>${escapeHtml(img.title)}</strong>` : ''}${img.title && img.caption ? ' &mdash; ' : ''}${escapeHtml(img.caption)}
+            </figcaption>
+          </figure>`).join('')}
+        </div>`;
+        };
+
         // Count findings by severity
         const findingSections = sections.filter(s => s.type?.toLowerCase() === "finding");
         const criticalCount = findingSections.filter(s => s.reportFinding?.severity === "CRITICAL").length;
@@ -1306,6 +1328,8 @@ function ReportWriter() {
         </div>
         ` : ''}
         
+        ${previewImages(section.reportFinding?.id)}
+
         ${section.reportFinding?.recommendation ? `
         <div class="mb-6">
           <h4 class="font-semibold text-base mb-2 text-gray-800">Recommendation</h4>
