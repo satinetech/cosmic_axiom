@@ -78,6 +78,7 @@ model Engagement {
   timeline     TimelineEvent[]
   indicators   Indicator[]
   assets       AffectedAsset[]
+  requests     ClientRequest[]
 }
 
 model Scope {
@@ -417,4 +418,34 @@ model AffectedAsset {
   updatedAt          DateTime         @updatedAt
 
   @@unique([engagementId, kind, identifier])
+}
+
+// Declared open first: MySQL sorts an enum column by this order.
+enum ClientRequestStatus {
+  OPEN
+  RECEIVED
+  DECLINED
+  NOT_NEEDED
+}
+
+// Something the team asked the client for: access, logs, an export, a
+// decision. Outstanding requests are often what an investigation waits on.
+model ClientRequest {
+  id           String              @id @default(uuid())
+  engagement   Engagement          @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  engagementId String
+
+  request      String
+  detail       String?             @db.Text
+  // Who at the client it was asked of.
+  requestedOf  String?
+  requestedAt  DateTime            @db.DateTime(3)
+  dueAt        DateTime?           @db.DateTime(3)
+  status       ClientRequestStatus @default(OPEN)
+  // Set when the status leaves OPEN, cleared if it returns.
+  resolvedAt   DateTime?           @db.DateTime(3)
+
+  createdBy    String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 }

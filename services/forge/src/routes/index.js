@@ -8,6 +8,7 @@ import testingParametersRoutes from './testingParameters.js';
 import timelineRoutes from '../records/timeline.js';
 import indicatorRoutes from '../records/indicators.js';
 import assetRoutes from '../records/assets.js';
+import requestRoutes from '../records/requests.js';
 
 const router = Router();
 
@@ -17,6 +18,7 @@ router.use('/engagement', oplogRoutes);
 router.use('/engagement', timelineRoutes);
 router.use('/engagement', indicatorRoutes);
 router.use('/engagement', assetRoutes);
+router.use('/engagement', requestRoutes);
 router.use('/engagement', engagementRoutes);
 router.use('/scope', scopeRoutes);
 router.use('/testing-parameters', testingParametersRoutes);
