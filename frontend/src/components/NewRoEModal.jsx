@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FileText, Shield, Cloud, AlertCircle } from "lucide-react";
 
+import { customerName } from "../utils/customerName";
 function NewRoEModal({ isOpen, onClose, onSubmit, engagement, isLoading = false }) {
     const [title, setTitle] = useState("");
     const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -14,7 +15,7 @@ function NewRoEModal({ isOpen, onClose, onSubmit, engagement, isLoading = false 
                 month: "short",
                 day: "numeric",
             });
-            setTitle(`${engagement.customer} ${start} Rules of Engagement`);
+            setTitle(`${customerName(engagement)} ${start} Rules of Engagement`);
         }
     }, [engagement]);
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { customerName } from "../utils/customerName";
 function NewReportModal({ isOpen, onClose, onSubmit, engagement, isLoading = false }) {
     const [title, setTitle] = useState("");
 
@@ -10,7 +11,7 @@ function NewReportModal({ isOpen, onClose, onSubmit, engagement, isLoading = fal
                 month: "short",
                 day: "numeric",
             });
-            setTitle(`${engagement.customer} ${start} Pentest Report`);
+            setTitle(`${customerName(engagement)} ${start} Pentest Report`);
         }
     }, [engagement]);
 
