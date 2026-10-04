@@ -7,6 +7,7 @@ import NewRoEModal from "../components/NewRoEModal";
 import ScopeModal from "../components/ScopeModal";
 import DashboardLayout from "../layouts/DashboardLayout";
 
+import { customerName } from "../utils/customerName";
 function Engagements() {
     const [engagements, setEngagements] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -267,7 +268,7 @@ function Engagements() {
         .filter((e) => {
             const matchesSearch = search === "" || 
                 e.name.toLowerCase().includes(search.toLowerCase()) ||
-                e.customer?.toLowerCase().includes(search.toLowerCase());
+                customerName(e).toLowerCase().includes(search.toLowerCase());
             const matchesStatus = statusFilter === "" || e.status === statusFilter;
             return matchesSearch && matchesStatus;
         })
@@ -441,7 +442,7 @@ function Engagements() {
                                     )}
                                 </td>
                                 <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                                    {engagement.customer}
+                                    {customerName(engagement)}
                                 </td>
                                 <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                                     {engagement.type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Network Pentest'}
