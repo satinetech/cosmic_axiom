@@ -2,6 +2,7 @@ import axios from "axios";
 import dotenv from "dotenv";
 import express from "express";
 import { authenticateRequest } from "../middleware/authenticateRequest.js";
+import { loadIncident } from "../incident.js";
 
 dotenv.config();
 
@@ -127,6 +128,17 @@ router.post("/:reportId/generate-pdf", authenticateRequest, async (req, res) => 
         
         // Add scopes to engagement object
         engagement.scopes = scopes;
+
+        // Incident response reports also carry the timeline, indicators,
+        // affected assets, and the decisions and actions from the log.
+        const incident = engagement.profile === "INCIDENT_RESPONSE"
+            ? await loadIncident({
+                forgeUrl: process.env.FORGE_URL,
+                astralUrl: process.env.ASTRAL_URL,
+                engagementId: report.engagementId,
+                token,
+            })
+            : null;
         
         // Send to Horizon to generate the PDF, passing existing filename if available
         const horizonRes = await axios.post(
@@ -134,6 +146,7 @@ router.post("/:reportId/generate-pdf", authenticateRequest, async (req, res) => 
             { 
                 report, 
                 engagement,
+                incident,
                 existingFilename: report.filename || null 
             },
             {
