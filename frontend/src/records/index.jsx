@@ -1,4 +1,5 @@
 import { INDICATOR_TYPES, IndicatorTools } from "./indicatorTools";
+import { RequestTools } from "./requestTools";
 
 /**
  * Engagement record kinds -- the incident-response modules (timeline,
@@ -47,6 +48,13 @@ const STATUS_BADGES = {
     REMEDIATED: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
     NOT_AFFECTED: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
 };
+
+export const REQUEST_STATUS = [
+    { value: "OPEN", label: "Open" },
+    { value: "RECEIVED", label: "Received" },
+    { value: "DECLINED", label: "Declined" },
+    { value: "NOT_NEEDED", label: "Not needed" },
+];
 
 export const RECORD_TYPES = {
     timeline: {
@@ -101,5 +109,30 @@ export const RECORD_TYPES = {
                 </span>
             ),
         },
+    },
+    requests: {
+        path: "requests",
+        title: "Client requests",
+        noun: "request",
+        intro: "What the team has asked the client for. Open requests first: they are usually what the investigation is waiting on.",
+        fields: [
+            { name: "request", label: "Request", type: "string", required: true, wide: true },
+            { name: "requestedOf", label: "Asked of", type: "string", placeholder: "Who at the client" },
+            { name: "status", label: "Status", type: "enum", options: REQUEST_STATUS, required: true, default: "OPEN" },
+            { name: "requestedAt", label: "Asked (UTC)", type: "datetime" },
+            { name: "dueAt", label: "Needed by (UTC)", type: "datetime" },
+            { name: "detail", label: "Detail", type: "text" },
+        ],
+        columns: ["status", "request", "requestedOf", "requestedAt", "dueAt"],
+        cells: {
+            status: (value) => (
+                <span className={`px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${value === "OPEN"
+                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                    : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"}`}>
+                    {REQUEST_STATUS.find((o) => o.value === value)?.label ?? value}
+                </span>
+            ),
+        },
+        actions: (props) => <RequestTools {...props} />,
     },
 };

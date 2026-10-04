@@ -10,7 +10,7 @@ const FORGE_URL = process.env.FORGE_URL;
 
 // Engagement record kinds forge serves at /engagement/:id/<kind>[/:recordId].
 // Adding a kind to forge means adding its name here.
-export const RECORD_KINDS = ["timeline", "indicators", "assets"];
+export const RECORD_KINDS = ["timeline", "indicators", "assets", "requests"];
 
 // Forwards to forge, passing its status and body through.
 router.all("/:id/:kind/:recordId?", authenticateRequest, async (req, res, next) => {
