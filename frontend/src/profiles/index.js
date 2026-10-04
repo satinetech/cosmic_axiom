@@ -22,7 +22,7 @@ export const PROFILES = {
         key: "INCIDENT_RESPONSE",
         label: "Incident response",
         usesTestingType: false,
-        tabs: ["overview", "timeline", "indicators", "findings", "log", "report"],
+        tabs: ["overview", "timeline", "indicators", "assets", "findings", "log", "report"],
     },
 };
 
@@ -33,6 +33,7 @@ export const TABS = {
     overview: { label: "Overview" },
     timeline: { label: "Timeline", records: "timeline" },
     indicators: { label: "Indicators", records: "indicators" },
+    assets: { label: "Affected assets", records: "assets" },
     scope: { label: "Scope" },
     findings: { label: "Findings & evidence" },
     log: { label: "Operator log" },

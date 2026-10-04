@@ -77,6 +77,7 @@ model Engagement {
   logEntries   OperatorLogEntry[]
   timeline     TimelineEvent[]
   indicators   Indicator[]
+  assets       AffectedAsset[]
 }
 
 model Scope {
@@ -375,4 +376,45 @@ model Indicator {
   updatedAt    DateTime      @updatedAt
 
   @@unique([engagementId, type, value])
+}
+
+enum AssetKind {
+  HOST
+  ACCOUNT
+  MAILBOX
+  APPLICATION
+  CLOUD_RESOURCE
+  NETWORK
+  OTHER
+}
+
+// Declared worst first: MySQL sorts an enum column by this order.
+enum CompromiseStatus {
+  CONFIRMED_COMPROMISED
+  SUSPECTED
+  CONTAINED
+  REMEDIATED
+  NOT_AFFECTED
+}
+
+// Something the incident touched, or may have: a host, an account, a mailbox.
+// Distinct from Scope, which records what a pentest is authorised to test.
+model AffectedAsset {
+  id                 String           @id @default(uuid())
+  engagement         Engagement       @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  engagementId       String
+
+  kind               AssetKind
+  // The host name, account name, address -- as the client knows it.
+  identifier         String
+  description        String?          @db.Text
+  status             CompromiseStatus @default(SUSPECTED)
+  firstCompromisedAt DateTime?        @db.DateTime(3)
+  containedAt        DateTime?        @db.DateTime(3)
+
+  createdBy          String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([engagementId, kind, identifier])
 }
