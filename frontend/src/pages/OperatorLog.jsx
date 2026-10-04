@@ -29,8 +29,11 @@ function localInputValue(date) {
 
 const emptyForm = () => ({ summary: "", earlier: false, occurredAt: "", targetAddress: "", tool: "", command: "", output: "", correctsSeq: "" });
 
-function OperatorLog() {
-    const { engagementId } = useParams();
+// Standalone at /engagements/:engagementId/log, or embedded as a tab of the
+// engagement's home page (engagementId passed in, own header hidden).
+function OperatorLog({ engagementId: engagementIdProp, embedded = false } = {}) {
+    const params = useParams();
+    const engagementId = engagementIdProp || params.engagementId;
     const [engagement, setEngagement] = useState(null);
     const [entries, setEntries] = useState([]);
     const [chain, setChain] = useState(null);
@@ -138,7 +141,8 @@ function OperatorLog() {
         }`;
 
     return (
-        <div className="p-6 max-w-5xl mx-auto space-y-6">
+        <div className={embedded ? "space-y-6" : "p-6 max-w-5xl mx-auto space-y-6"}>
+            {!embedded && (
             <div className="flex items-center gap-3">
                 <Link to="/engagements" className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" title="Back to engagements">
                     <ArrowLeft size={18} />
@@ -148,6 +152,7 @@ function OperatorLog() {
                     {engagement && <p className="text-sm text-gray-500 dark:text-gray-400">{engagement.name} · {engagement.customerName}</p>}
                 </div>
             </div>
+            )}
 
             {chain && (
                 <div className={`rounded-lg border p-4 text-sm ${chain.ok

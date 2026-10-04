@@ -408,7 +408,7 @@ function Engagements() {
                             {paginatedEngagements.map((engagement) => (
                             <tr key={engagement.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                 <td className="px-6 py-4">
-                                    <div className="font-medium text-gray-900 dark:text-gray-100">{engagement.name}</div>
+                                    <Link to={`/engagements/${engagement.id}`} className="font-medium text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline">{engagement.name}</Link>
                                     {engagement.description && (
                                         <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{engagement.description}</div>
                                     )}

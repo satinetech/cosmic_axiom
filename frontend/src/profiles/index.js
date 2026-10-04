@@ -15,15 +15,28 @@ export const PROFILES = {
         // The pentest type (network, web app, ...) and testing methodology
         // refine this profile only.
         usesTestingType: true,
+        // The engagement home page's tabs, in order (keys from TABS).
+        tabs: ["overview", "scope", "findings", "log", "roe", "report"],
     },
     INCIDENT_RESPONSE: {
         key: "INCIDENT_RESPONSE",
         label: "Incident response",
         usesTestingType: false,
+        tabs: ["overview", "findings", "log", "report"],
     },
 };
 
 export const DEFAULT_PROFILE = "PENTEST";
+
+/** Every tab an engagement home page can show; a profile picks from these. */
+export const TABS = {
+    overview: { label: "Overview" },
+    scope: { label: "Scope" },
+    findings: { label: "Findings & evidence" },
+    log: { label: "Operator log" },
+    roe: { label: "Rules of engagement" },
+    report: { label: "Report" },
+};
 
 /** The profile definition for an engagement; anything unrecognised is a pentest. */
 export function profileOf(engagement) {
