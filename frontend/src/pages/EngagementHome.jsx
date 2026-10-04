@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import ImageManagementModal from "../components/ImageManagementModal";
 import NewEngagementModal from "../components/NewEngagementModal";
+import RecordsTab from "../components/RecordsTab";
+import { RECORD_TYPES } from "../records";
 import ScopeModal from "../components/ScopeModal";
 import { TABS, engagementKindLabel, profileOf } from "../profiles";
 import OperatorLog from "./OperatorLog";
@@ -101,6 +103,7 @@ function EngagementHome() {
             </nav>
 
             {tab === "overview" && <OverviewTab engagement={engagement} report={report} onChanged={load} />}
+            {TABS[tab].records && <RecordsTab key={tab} engagementId={engagementId} config={RECORD_TYPES[TABS[tab].records]} />}
             {tab === "scope" && <ScopeTab engagement={engagement} onChanged={load} />}
             {tab === "findings" && <FindingsTab engagement={engagement} report={report} onReportCreated={load} />}
             {tab === "log" && <OperatorLog engagementId={engagementId} embedded />}

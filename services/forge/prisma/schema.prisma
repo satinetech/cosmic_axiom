@@ -75,6 +75,7 @@ model Engagement {
   scopes       Scope[]
   testingParameters TestingParameters?
   logEntries   OperatorLogEntry[]
+  timeline     TimelineEvent[]
 }
 
 model Scope {
@@ -304,4 +305,38 @@ model OplogAttachment {
 
   @@index([entryId])
   @@index([sha256])
+}
+
+// ---------------------------------------------------------------------------
+// Incident response: what the attacker did, reconstructed. Unlike the operator
+// log (what WE did, append-only), this is the team's evolving analysis and is
+// edited as understanding improves.
+// ---------------------------------------------------------------------------
+
+enum Confidence {
+  CONFIRMED
+  LIKELY
+  POSSIBLE
+}
+
+model TimelineEvent {
+  id           String     @id @default(uuid())
+  engagement   Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  engagementId String
+
+  // When it happened, in UTC.
+  occurredAt   DateTime   @db.DateTime(3)
+  title        String
+  detail       String?    @db.Text
+  // Where it was seen: a log source, a tool, a host artifact.
+  source       String?
+  confidence   Confidence @default(LIKELY)
+  // A MITRE ATT&CK tactic (e.g. "Initial Access"), when one applies.
+  tactic       String?
+
+  createdBy    String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([engagementId, occurredAt])
 }
