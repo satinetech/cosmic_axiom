@@ -1,0 +1,258 @@
+{
+  "report": {
+    "id": "r0000000-0000-4000-8000-0000000000ir",
+    "engagementId": "e0000000-0000-4000-8000-0000000000ir",
+    "title": "Example Corp Incident Response Report",
+    "createdAt": "2026-09-14T09:00:00.000Z",
+    "updatedAt": "2026-09-16T17:00:00.000Z",
+    "filename": null,
+    "executiveSummary": "On **12 September 2026** an attacker gained access to a finance user's mailbox by stealing a signed-in session through a phishing page. They read mail and set a rule forwarding it outside the company for about 26 hours.\n\nThe account was disabled and the rule removed on 13 September. No funds were transferred.",
+    "methodology": null,
+    "toolsAndTechniques": null,
+    "conclusion": "The incident was contained within 26 hours of initial access and no wire fraud occurred. The root cause was MFA that a stolen session can satisfy; the recommendations above remove that path.",
+    "sections": [
+      {
+        "id": "s0000000-0000-4000-8000-0000000000i1",
+        "reportId": "r0000000-0000-4000-8000-0000000000ir",
+        "type": "FINDING",
+        "position": 0,
+        "title": null,
+        "content": null,
+        "reportFindingId": "f0000000-0000-4000-8000-0000000000i1",
+        "reportFinding": {
+          "id": "f0000000-0000-4000-8000-0000000000i1",
+          "reportId": "r0000000-0000-4000-8000-0000000000ir",
+          "title": "Business email compromise via adversary-in-the-middle phishing",
+          "severity": "CRITICAL",
+          "description": "An attacker phished the session token of **jsmith@example.com** through an adversary-in-the-middle page, then used it from `203.0.113.45` to read mail and create a forwarding rule.\n\nMFA was satisfied by the stolen session, so it did not stop the sign-in.",
+          "impact": "Finance correspondence, including two pending wire instructions, was readable by the attacker for about 26 hours.",
+          "recommendation": "1. Require phishing-resistant MFA (FIDO2) for finance roles.\n2. Block mailbox auto-forwarding to external domains.\n3. Alert on inbox rules that forward or delete.",
+          "reference": "https://attack.mitre.org/techniques/T1557/",
+          "tags": [
+            "BEC",
+            "AiTM"
+          ],
+          "affectedSystems": [
+            "jsmith@example.com"
+          ],
+          "images": [
+            {
+              "id": "i0000000-0000-4000-8000-0000000000i1",
+              "reportFindingId": "f0000000-0000-4000-8000-0000000000i1",
+              "title": "Malicious inbox rule",
+              "caption": "Forward-all rule created from the attacker's session.",
+              "imageData": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+              "mimeType": "image/png"
+            }
+          ],
+          "createdAt": "2026-09-14T10:00:00.000Z",
+          "updatedAt": "2026-09-14T10:00:00.000Z"
+        },
+        "createdAt": "2026-09-14T10:00:00.000Z",
+        "updatedAt": "2026-09-14T10:00:00.000Z"
+      }
+    ]
+  },
+  "engagement": {
+    "id": "e0000000-0000-4000-8000-0000000000ir",
+    "name": "Example Corp BEC",
+    "description": "Investigation of a suspected mailbox compromise.",
+    "status": "ACTIVE",
+    "profile": "INCIDENT_RESPONSE",
+    "startDate": "2026-09-13T00:00:00.000Z",
+    "endDate": null,
+    "customerId": "c1",
+    "customer": {
+      "id": "c1",
+      "name": "Example Corp",
+      "customerName": "Example Corp",
+      "contactName": "Dana Reyes",
+      "contactEmail": "dana.reyes@example.com",
+      "contactPhone": "+1 555 0100",
+      "contactTitle": "Primary Contact"
+    },
+    "customerName": "Example Corp",
+    "organization": "Cosmic Axiom Security",
+    "type": "NETWORK_PENTEST",
+    "methodology": "BLACK_BOX",
+    "scopes": []
+  },
+  "incident": {
+    "timeline": [
+      {
+        "occurredAt": "2026-09-12T13:42:10.000Z",
+        "title": "Session token replayed from 203.0.113.45",
+        "tactic": "Credential Access",
+        "confidence": "CONFIRMED",
+        "source": "Entra sign-in logs",
+        "detail": "Sign-in reused a session issued 3 minutes earlier to the user's own laptop; user agent and ASN differ."
+      },
+      {
+        "occurredAt": "2026-09-12T13:38:55.000Z",
+        "title": "User submitted credentials on look-alike sign-in page",
+        "tactic": "Initial Access",
+        "confidence": "CONFIRMED",
+        "source": "Proxy logs, user interview",
+        "detail": null
+      },
+      {
+        "occurredAt": "2026-09-12T13:31:02.000Z",
+        "title": "Phishing email delivered to jsmith@example.com",
+        "tactic": "Initial Access",
+        "confidence": "CONFIRMED",
+        "source": "Message trace",
+        "detail": null
+      },
+      {
+        "occurredAt": "2026-09-12T13:51:40.000Z",
+        "title": "Inbox rule created forwarding all mail externally",
+        "tactic": "Collection",
+        "confidence": "CONFIRMED",
+        "source": "Mailbox audit log",
+        "detail": null
+      },
+      {
+        "occurredAt": "2026-09-12T14:05:00.000Z",
+        "title": "Attacker searched mailbox for \"wire\" and \"invoice\"",
+        "tactic": "Discovery",
+        "confidence": "LIKELY",
+        "source": "Mailbox audit log (MailItemsAccessed)",
+        "detail": null
+      },
+      {
+        "occurredAt": "2026-09-13T15:20:00.000Z",
+        "title": "No further sign-ins after the account was disabled",
+        "tactic": null,
+        "confidence": "CONFIRMED",
+        "source": "Entra sign-in logs",
+        "detail": null
+      }
+    ],
+    "indicators": [
+      {
+        "type": "IP",
+        "value": "203.0.113.45",
+        "confidence": "CONFIRMED",
+        "firstSeen": "2026-09-12T13:42:10.000Z",
+        "lastSeen": "2026-09-13T11:02:00.000Z",
+        "description": "Attacker sign-ins"
+      },
+      {
+        "type": "DOMAIN",
+        "value": "examp1e-login.com",
+        "confidence": "CONFIRMED",
+        "firstSeen": null,
+        "lastSeen": null,
+        "description": "Phishing page host (defanged in comms as examp1e-login[.]com)"
+      },
+      {
+        "type": "URL",
+        "value": "https://examp1e-login.com/common/oauth2/authorize",
+        "confidence": "CONFIRMED",
+        "firstSeen": null,
+        "lastSeen": null,
+        "description": null
+      },
+      {
+        "type": "EMAIL",
+        "value": "invoices@examp1e-billing.com",
+        "confidence": "CONFIRMED",
+        "firstSeen": null,
+        "lastSeen": null,
+        "description": "Phishing sender"
+      },
+      {
+        "type": "EMAIL",
+        "value": "receipts.ap@protonmail.example",
+        "confidence": "LIKELY",
+        "firstSeen": null,
+        "lastSeen": null,
+        "description": "Forwarding destination"
+      },
+      {
+        "type": "HASH_SHA256",
+        "value": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+        "confidence": "POSSIBLE",
+        "firstSeen": null,
+        "lastSeen": null,
+        "description": "Attachment on a related message; not opened"
+      }
+    ],
+    "assets": [
+      {
+        "kind": "MAILBOX",
+        "identifier": "jsmith@example.com",
+        "status": "REMEDIATED",
+        "firstCompromisedAt": "2026-09-12T13:42:10.000Z",
+        "containedAt": "2026-09-13T15:05:00.000Z",
+        "description": "Rule removed, sessions revoked, password reset"
+      },
+      {
+        "kind": "ACCOUNT",
+        "identifier": "jsmith@example.com",
+        "status": "CONTAINED",
+        "firstCompromisedAt": "2026-09-12T13:42:10.000Z",
+        "containedAt": "2026-09-13T15:05:00.000Z",
+        "description": "Disabled pending FIDO2 enrolment"
+      },
+      {
+        "kind": "HOST",
+        "identifier": "FIN-LAPTOP-07",
+        "status": "NOT_AFFECTED",
+        "firstCompromisedAt": null,
+        "containedAt": null,
+        "description": "Velociraptor triage found no persistence"
+      },
+      {
+        "kind": "MAILBOX",
+        "identifier": "ap@example.com",
+        "status": "SUSPECTED",
+        "firstCompromisedAt": null,
+        "containedAt": null,
+        "description": "Received the same lure; no sign-in from attacker IPs yet"
+      },
+      {
+        "kind": "APPLICATION",
+        "identifier": "Microsoft 365",
+        "status": "CONFIRMED_COMPROMISED",
+        "firstCompromisedAt": "2026-09-12T13:42:10.000Z",
+        "containedAt": null,
+        "description": "Tenant-level: external forwarding still allowed"
+      }
+    ],
+    "decisions": [
+      {
+        "occurredAt": "2026-09-13T14:50:00.000Z",
+        "summary": "Disable jsmith's account and revoke all sessions immediately, before notifying the user.",
+        "approvedBy": "Dana Reyes, IT Director",
+        "operator": "Lead analyst"
+      },
+      {
+        "occurredAt": "2026-09-13T16:30:00.000Z",
+        "summary": "Notify the bank about the two pending wire instructions.",
+        "approvedBy": "CFO",
+        "operator": "Lead analyst"
+      }
+    ],
+    "actions": [
+      {
+        "occurredAt": "2026-09-13T15:05:00.000Z",
+        "summary": "Disabled the account and revoked refresh tokens.",
+        "operator": "Analyst",
+        "targetAddress": "jsmith@example.com"
+      },
+      {
+        "occurredAt": "2026-09-13T15:12:00.000Z",
+        "summary": "Removed the forwarding inbox rule; exported it first as evidence.",
+        "operator": "Analyst",
+        "targetAddress": "jsmith@example.com"
+      },
+      {
+        "occurredAt": "2026-09-13T16:00:00.000Z",
+        "summary": "Searched the tenant for other messages from the phishing sender: 3 found, purged.",
+        "operator": "Analyst",
+        "targetAddress": null
+      }
+    ]
+  }
+}

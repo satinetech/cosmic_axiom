@@ -5,7 +5,7 @@
   "description": "Renderer-neutral report data produced by buildPayload(). Dates are ISO 8601 UTC; enums keep their database spelling; operator prose is a closed block/inline tree; nothing is pre-formatted.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "generatedAt", "report", "engagement", "sections", "findings"],
+  "required": ["schemaVersion", "generatedAt", "report", "engagement", "sections", "findings", "incident"],
   "properties": {
     "schemaVersion": { "const": 1 },
     "generatedAt": { "$ref": "#/$defs/timestamp" },
@@ -29,10 +29,11 @@
     "engagement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "name", "type", "methodology", "status", "startDate", "endDate", "organization", "customer", "scope"],
+      "required": ["id", "name", "profile", "type", "methodology", "status", "startDate", "endDate", "organization", "customer", "scope"],
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
+        "profile": { "description": "What kind of work the engagement is; decides the report template.", "enum": ["PENTEST", "INCIDENT_RESPONSE"] },
         "type": { "$ref": "#/$defs/optionalString", "description": "Engagement type enum, e.g. WEB_APP_PENTEST." },
         "methodology": { "$ref": "#/$defs/optionalString", "description": "Testing methodology enum, e.g. BLACK_BOX." },
         "status": { "$ref": "#/$defs/optionalString" },
@@ -109,6 +110,99 @@
         ]
       }
     },
+    "incident": {
+      "description": "Incident-response data: an object for INCIDENT_RESPONSE engagements (lists possibly empty), null otherwise.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["timeline", "indicators", "assets", "decisions", "actions"],
+          "properties": {
+            "timeline": {
+              "description": "What the attacker did, oldest first.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["occurredAt", "title", "detail", "source", "confidence", "tactic"],
+                "properties": {
+                  "occurredAt": { "$ref": "#/$defs/timestamp" },
+                  "title": { "type": "string" },
+                  "detail": { "$ref": "#/$defs/text" },
+                  "source": { "$ref": "#/$defs/optionalString" },
+                  "confidence": { "$ref": "#/$defs/confidence" },
+                  "tactic": { "$ref": "#/$defs/optionalString" }
+                }
+              }
+            },
+            "indicators": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "value", "confidence", "firstSeen", "lastSeen", "description"],
+                "properties": {
+                  "type": { "enum": ["IP", "DOMAIN", "URL", "EMAIL", "HASH_MD5", "HASH_SHA1", "HASH_SHA256", "FILE_NAME", "ACCOUNT", "OTHER"] },
+                  "value": { "type": "string" },
+                  "confidence": { "$ref": "#/$defs/confidence" },
+                  "firstSeen": { "$ref": "#/$defs/optionalTimestamp" },
+                  "lastSeen": { "$ref": "#/$defs/optionalTimestamp" },
+                  "description": { "$ref": "#/$defs/optionalString" }
+                }
+              }
+            },
+            "assets": {
+              "description": "What the incident touched, worst first.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "identifier", "status", "firstCompromisedAt", "containedAt", "description"],
+                "properties": {
+                  "kind": { "enum": ["HOST", "ACCOUNT", "MAILBOX", "APPLICATION", "CLOUD_RESOURCE", "NETWORK", "OTHER"] },
+                  "identifier": { "type": "string" },
+                  "status": { "enum": ["CONFIRMED_COMPROMISED", "SUSPECTED", "CONTAINED", "REMEDIATED", "NOT_AFFECTED"] },
+                  "firstCompromisedAt": { "$ref": "#/$defs/optionalTimestamp" },
+                  "containedAt": { "$ref": "#/$defs/optionalTimestamp" },
+                  "description": { "$ref": "#/$defs/optionalString" }
+                }
+              }
+            },
+            "decisions": {
+              "description": "What was decided and who authorised it, oldest first.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["occurredAt", "summary", "approvedBy", "operator"],
+                "properties": {
+                  "occurredAt": { "$ref": "#/$defs/timestamp" },
+                  "summary": { "$ref": "#/$defs/text" },
+                  "approvedBy": { "$ref": "#/$defs/optionalString" },
+                  "operator": { "$ref": "#/$defs/optionalString" }
+                }
+              }
+            },
+            "actions": {
+              "description": "What the team did, oldest first.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["occurredAt", "summary", "operator", "targetAddress"],
+                "properties": {
+                  "occurredAt": { "$ref": "#/$defs/timestamp" },
+                  "summary": { "$ref": "#/$defs/text" },
+                  "operator": { "$ref": "#/$defs/optionalString" },
+                  "targetAddress": { "$ref": "#/$defs/optionalString" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
     "findings": {
       "description": "Each finding once, in the order it first appears in `sections`.",
       "type": "array",
@@ -156,6 +250,7 @@
     "optionalTimestamp": {
       "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/timestamp" }]
     },
+    "confidence": { "enum": ["CONFIRMED", "LIKELY", "POSSIBLE"] },
     "optionalString": {
       "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1 }]
     },

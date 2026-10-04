@@ -239,3 +239,91 @@ describe("buildPayload", () => {
         });
     });
 });
+
+describe("incident response", () => {
+    function irInput(incident) {
+        const input = minimalInput();
+        input.engagement.profile = "INCIDENT_RESPONSE";
+        input.incident = incident;
+        return input;
+    }
+
+    test("a pentest engagement has no incident block, even when one is sent", () => {
+        const input = minimalInput();
+        input.incident = { timeline: [{ occurredAt: "2026-01-01T00:00:00Z", title: "x" }] };
+        const { payload } = buildPayload(input);
+        assert.equal(payload.engagement.profile, "PENTEST");
+        assert.equal(payload.incident, null);
+        assertValid(payload);
+    });
+
+    test("an unknown profile is rejected", () => {
+        const input = minimalInput();
+        input.engagement.profile = "FORENSICS";
+        assert.throws(() => buildPayload(input), (err) => err instanceof PayloadError && err.path === "engagement.profile");
+    });
+
+    test("an incident with nothing recorded yet still renders", () => {
+        const { payload } = buildPayload(irInput(undefined));
+        assert.deepEqual(payload.incident, { timeline: [], indicators: [], assets: [], decisions: [], actions: [] });
+        assertValid(payload);
+    });
+
+    test("orders the timeline, decisions and actions by time, and assets worst first", () => {
+        const { payload } = buildPayload(irInput({
+            timeline: [
+                { occurredAt: "2026-01-02T00:00:00Z", title: "second" },
+                { occurredAt: "2026-01-01T00:00:00Z", title: "first" },
+            ],
+            assets: [
+                { kind: "HOST", identifier: "ok", status: "NOT_AFFECTED" },
+                { kind: "HOST", identifier: "bad", status: "CONFIRMED_COMPROMISED" },
+                { kind: "HOST", identifier: "held", status: "CONTAINED" },
+            ],
+            decisions: [
+                { occurredAt: "2026-01-03T00:00:00Z", summary: "later", approvedBy: "CFO" },
+                { occurredAt: "2026-01-01T00:00:00Z", summary: "earlier", approvedBy: "CISO" },
+            ],
+            actions: [
+                { occurredAt: "2026-01-05T00:00:00Z", summary: "b" },
+                { occurredAt: "2026-01-04T00:00:00Z", summary: "a" },
+            ],
+        }));
+        assert.deepEqual(payload.incident.timeline.map((e) => e.title), ["first", "second"]);
+        assert.deepEqual(payload.incident.assets.map((a) => a.identifier), ["bad", "held", "ok"]);
+        assert.deepEqual(payload.incident.decisions.map((d) => d.approvedBy), ["CISO", "CFO"]);
+        assert.deepEqual(payload.incident.actions.map((a) => a.occurredAt), ["2026-01-04T00:00:00.000Z", "2026-01-05T00:00:00.000Z"]);
+        assertValid(payload);
+    });
+
+    test("fills in defaults and parses prose", () => {
+        const { payload } = buildPayload(irInput({
+            timeline: [{ occurredAt: "2026-01-01T00:00:00Z", title: " t ", detail: "**bold**" }],
+            indicators: [{ type: "IP", value: "198.51.100.7" }],
+            assets: [{ kind: "ACCOUNT", identifier: "svc" }],
+        }));
+        const [event] = payload.incident.timeline;
+        assert.equal(event.title, "t");
+        assert.equal(event.confidence, "LIKELY");
+        assert.equal(event.detail[0].children[0].type, "strong");
+        assert.equal(payload.incident.indicators[0].confidence, "LIKELY");
+        assert.equal(payload.incident.assets[0].status, "SUSPECTED");
+        assertValid(payload);
+    });
+
+    describe("rejects records it cannot represent, naming the field", () => {
+        const cases = [
+            ["a timeline event without a time", { timeline: [{ title: "x" }] }, "incident.timeline[0].occurredAt"],
+            ["an unknown confidence", { timeline: [{ occurredAt: "2026-01-01T00:00:00Z", confidence: "SURE" }] }, "incident.timeline[0].confidence"],
+            ["an unknown indicator type", { indicators: [{ type: "MUTEX", value: "x" }] }, "incident.indicators[0].type"],
+            ["an unknown asset kind", { assets: [{ kind: "PRINTER", identifier: "p" }] }, "incident.assets[0].kind"],
+            ["an unknown compromise status", { assets: [{ kind: "HOST", identifier: "h", status: "PWNED" }] }, "incident.assets[0].status"],
+            ["an unparseable decision time", { decisions: [{ occurredAt: "soon" }] }, "incident.decisions[0].occurredAt"],
+        ];
+        for (const [what, incident, where] of cases) {
+            test(what, () => {
+                assert.throws(() => buildPayload(irInput(incident)), (err) => err instanceof PayloadError && err.path === where);
+            });
+        }
+    });
+});

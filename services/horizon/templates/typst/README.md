@@ -1,6 +1,6 @@
 # Typst report templates
 
-Used when horizon runs with `REPORT_RENDERER=typst`. Each subdirectory here is a template whose entry point is `main.typ`. `report/` is the neutral built-in one.
+Each subdirectory here is a template whose entry point is `main.typ`. `report/` is the neutral built-in pentest report, used when horizon runs with `REPORT_RENDERER=typst`. `ir-report/` is the incident response report; engagements whose profile is `INCIDENT_RESPONSE` always use it, whatever `REPORT_RENDERER` says, because there is no HTML version.
 
 ## The contract
 
@@ -13,6 +13,7 @@ A template receives one input, `payload`: the path of a JSON file described by [
 - Dates are ISO 8601 UTC strings, and enums keep their database spelling (`CRITICAL`, `WEB_APP_PENTEST`). Nothing is pre-formatted or pre-counted, so formatting and totals are the template's choice.
 - `sections` is the report body in reading order. Finding sections carry a `findingId` into `findings`, and `findings` lists each finding once, in the order it first appears.
 - Operator prose (summaries, finding descriptions and so on) is a block/inline tree, not a string. `report/prose.typ` renders it, and other templates can import it.
+- `engagement.profile` is `PENTEST` or `INCIDENT_RESPONSE`. For incident response, `incident` holds the timeline, indicators, affected assets, decisions and actions; for a pentest it is `null`.
 - Image `path`s are relative to the payload file: `image(dir + "/" + img.path)`, where `dir` is the payload path without its file name.
 
 ## Writing your own
@@ -33,7 +34,7 @@ To use templates kept outside this repository, point horizon at their directory:
 | `TYPST_TEMPLATE` | `report` | The subdirectory to use |
 | `TYPST_FONT_PATHS` | — | Extra font directories, separated by `:` |
 
-horizon checks at startup that `$TYPST_TEMPLATES_DIR/$TYPST_TEMPLATE/main.typ` exists.
+horizon checks at startup that `$TYPST_TEMPLATES_DIR/$TYPST_TEMPLATE/main.typ` exists. Incident response reports use `$TYPST_TEMPLATES_DIR/ir-report/` when that exists, and the built-in `ir-report/` otherwise; it imports `../report/prose.typ`, so a copy needs that file beside it.
 
 When a report is rendered, the whole templates directory is copied into a scratch directory, and Typst runs with that as its root. So a template can import shared files from a sibling directory, for example `#import "../brand/lib.typ": *`, but it can read nothing outside the templates directory and the report's own data. Symbolic links are copied as the files they point to.
 
@@ -43,4 +44,4 @@ Only fonts embedded in Typst are available by default: Libertinus Serif, New Com
 
 ## Changing the built-in template
 
-`npm test` compares every page of both fixtures against the images in `test/golden/`. After an intended change, run `npm run golden` and commit the new images, so reviewers see the change page by page.
+`npm test` compares every page of every fixture against the images in `test/golden/`. After an intended change, run `npm run golden` and commit the new images, so reviewers see the change page by page.

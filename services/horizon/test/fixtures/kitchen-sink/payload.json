@@ -123,6 +123,7 @@
   "engagement": {
     "id": "9b1f2c44-1d2e-4f3a-8b5c-00000000ks01",
     "name": "Example Corp Web App 2026",
+    "profile": "PENTEST",
     "type": "WEB_APP_PENTEST",
     "methodology": "GRAY_BOX",
     "status": "ACTIVE",
@@ -498,5 +499,6 @@
       "affectedSystems": [],
       "images": []
     }
-  ]
+  ],
+  "incident": null
 }
