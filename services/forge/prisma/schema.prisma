@@ -44,6 +44,11 @@ model Engagement {
   endDate      DateTime?
   status       EngagementStatus @default(PLANNED)
   
+  // What kind of work this is. It decides which parts of the workspace the
+  // engagement uses and which report template renders it. `type` refines a
+  // PENTEST (network, web app, ...) and is not used by other profiles.
+  profile      EngagementProfile @default(PENTEST)
+
   // Engagement type and methodology
   type         EngagementType    @default(NETWORK_PENTEST)
   methodology  TestingMethodology @default(BLACK_BOX)
@@ -159,6 +164,11 @@ enum EngagementStatus {
   ACTIVE
   COMPLETED
   CANCELED
+}
+
+enum EngagementProfile {
+  PENTEST
+  INCIDENT_RESPONSE
 }
 
 enum EngagementType {
