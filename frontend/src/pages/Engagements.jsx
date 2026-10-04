@@ -1,6 +1,7 @@
 import { Plus, Edit2, Trash2, Search, Filter, Calendar, Users, FileText, ChevronDown, ChevronUp, Target, Shield, MoreHorizontal, ScrollText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { engagementKindLabel } from "../profiles";
 import NewEngagementModal from "../components/NewEngagementModal";
 import NewReportModal from "../components/NewReportModal";
 import NewRoEModal from "../components/NewRoEModal";
@@ -416,7 +417,7 @@ function Engagements() {
                                     {engagement.customer}
                                 </td>
                                 <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                                    {engagement.type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Network Pentest'}
+                                    {engagementKindLabel(engagement)}
                                 </td>
                                 <td className="px-6 py-4">
                                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
