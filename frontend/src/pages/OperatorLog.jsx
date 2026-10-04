@@ -27,7 +27,7 @@ function localInputValue(date) {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-const emptyForm = () => ({ summary: "", earlier: false, occurredAt: "", targetAddress: "", tool: "", command: "", output: "", correctsSeq: "" });
+const emptyForm = () => ({ kind: "ACTION", approvedBy: "", summary: "", earlier: false, occurredAt: "", targetAddress: "", tool: "", command: "", output: "", correctsSeq: "" });
 
 // Standalone at /engagements/:engagementId/log, or embedded as a tab of the
 // engagement's home page (engagementId passed in, own header hidden).
@@ -107,7 +107,8 @@ function OperatorLog({ engagementId: engagementIdProp, embedded = false } = {}) 
         e.preventDefault();
         setSaving(true);
         setFormError(null);
-        const body = { summary: form.summary };
+        const body = { summary: form.summary, kind: form.kind };
+        if (form.kind === "DECISION") body.approvedBy = form.approvedBy;
         if (form.earlier && form.occurredAt) body.occurredAt = new Date(form.occurredAt).toISOString();
         for (const field of ["targetAddress", "tool", "command", "output"]) if (form[field].trim()) body[field] = form[field];
         if (form.correctsSeq) body.correctsSeq = Number(form.correctsSeq);
@@ -169,6 +170,24 @@ function OperatorLog({ engagementId: engagementIdProp, embedded = false } = {}) 
             )}
 
             <form onSubmit={submit} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden text-sm" role="radiogroup" aria-label="Kind of entry">
+                        {[["ACTION", "Action"], ["DECISION", "Decision"]].map(([value, label]) => (
+                            <button key={value} type="button" role="radio" aria-checked={form.kind === value}
+                                onClick={() => setForm((f) => ({ ...f, kind: value }))}
+                                className={`px-3 py-1.5 ${form.kind === value ? "bg-indigo-600 text-white" : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                    {form.kind === "DECISION" && (
+                        <input value={form.approvedBy} onChange={set("approvedBy")} required aria-label="Approved by"
+                            placeholder="Approved by (who authorised it)" className={`${inputClass("approvedBy")} md:w-80 w-full`} />
+                    )}
+                    <span className="text-xs text-gray-500">
+                        {form.kind === "DECISION" ? "A decision: what was decided, and who authorised it." : "An action: something the team did."}
+                    </span>
+                </div>
                 <textarea
                     ref={summaryRef}
                     rows={2}
@@ -179,7 +198,9 @@ function OperatorLog({ engagementId: engagementIdProp, embedded = false } = {}) 
                     required
                     aria-label="What was done, and why"
                     className={inputClass("summary")}
-                    placeholder="What did you do, and why? e.g. Tested the login form for SQL injection; blind boolean-based injection in the username field."
+                    placeholder={form.kind === "DECISION"
+                        ? "What was decided, and why? e.g. Disable jsmith's account and revoke sessions: confirmed token theft."
+                        : "What did you do, and why? e.g. Tested the login form for SQL injection; blind boolean-based injection in the username field."}
                 />
                 <div className="flex flex-col md:flex-row gap-3">
                     <input value={form.targetAddress} onChange={set("targetAddress")} list="oplog-targets" aria-label="Target"
@@ -261,6 +282,11 @@ function OperatorLog({ engagementId: engagementIdProp, embedded = false } = {}) 
                                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs ${verdict.className}`}>
                                             {e.scopeVerdict === "IN_SCOPE" ? <CheckCircle size={12} /> : e.scopeVerdict === "OUT_OF_SCOPE" ? <XCircle size={12} /> : <AlertTriangle size={12} />}
                                             {verdict.label}
+                                        </span>
+                                    )}
+                                    {e.kind === "DECISION" && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs text-indigo-700 bg-indigo-50 border-indigo-200 dark:text-indigo-300 dark:bg-indigo-900/20 dark:border-indigo-800">
+                                            Decision · approved by {e.approvedBy}
                                         </span>
                                     )}
                                     {e.correctsSeq && <span className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400"><Link2 size={12} /> corrects #{e.correctsSeq}</span>}

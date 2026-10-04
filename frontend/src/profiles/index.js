@@ -23,6 +23,8 @@ export const PROFILES = {
         label: "Incident response",
         usesTestingType: false,
         tabs: ["overview", "timeline", "indicators", "assets", "findings", "log", "requests", "report"],
+        // Tab names this profile words differently.
+        tabLabels: { log: "Actions & decisions" },
     },
 };
 

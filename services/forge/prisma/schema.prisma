@@ -279,6 +279,16 @@ model OperatorLogEntry {
 
   correctsSeq   Int?
 
+  // ACTION: something the team did. DECISION: something decided -- contain,
+  // reset, notify -- with who authorised it.
+  kind          OplogKind  @default(ACTION)
+  approvedBy    String?
+
+  // Which canonical form entryDigest covers (src/oplog/chain.js). 1 predates
+  // kind and approvedBy; new entries are written as 2. Existing entries keep
+  // the form they were hashed in, so their digests still verify.
+  format        Int        @default(1)
+
   // The chain: prevDigest is the previous entry's entryDigest (64 zeros for
   // seq 1); entryDigest is the sha256 of this entry's canonical form, which
   // includes prevDigest. Editing any entry breaks every digest after it.
@@ -288,6 +298,11 @@ model OperatorLogEntry {
   attachments   OplogAttachment[]
 
   @@unique([engagementId, seq])
+}
+
+enum OplogKind {
+  ACTION
+  DECISION
 }
 
 enum ScopeVerdict {
