@@ -1,8 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import { EngagementProfile, PrismaClient } from "@prisma/client";
 import { Router } from "express";
 import { authenticateRequest } from "../middleware/authenticateRequest.js";
 
 const prisma = new PrismaClient();
+const PROFILES = Object.values(EngagementProfile);
 const router = Router();
 
 // GET /engagement - List all engagements
@@ -27,6 +28,7 @@ router.get("/", authenticateRequest, async (req, res) => {
                 endDate: e.endDate,
                 customerId: e.customerId,
                 customer: e.customer?.name || "Unknown",
+                profile: e.profile,
                 type: e.type,
                 methodology: e.methodology,
                 riskTolerance: e.riskTolerance,
@@ -92,6 +94,7 @@ router.get("/:id", authenticateRequest, async (req, res) => {
             contactPhone: primaryContact?.phone || null, // Keep for backward compatibility
             contactTitle: "Primary Contact", // Keep for backward compatibility
             organization: "Cosmic Axiom Security", // Testing organization
+            profile: engagement.profile,
             type: engagement.type,
             methodology: engagement.methodology,
             complianceFrameworks: engagement.complianceFrameworks,
@@ -114,13 +117,16 @@ router.get("/:id", authenticateRequest, async (req, res) => {
 router.post("/", authenticateRequest, async (req, res) => {
     const { 
         name, description, customerId, status, startDate, endDate,
-        type, methodology, complianceFrameworks, riskTolerance,
+        profile, type, methodology, complianceFrameworks, riskTolerance,
         businessCriticalHours, criticalSystems, previousEngagements,
         budgetHours, maxConcurrentTesters, testingParameters
     } = req.body;
 
     if (!name || !customerId) {
         return res.status(400).json({ error: "Missing required fields" });
+    }
+    if (profile !== undefined && !PROFILES.includes(profile)) {
+        return res.status(400).json({ error: `profile must be one of ${PROFILES.join(", ")}` });
     }
 
     try {
@@ -132,6 +138,7 @@ router.post("/", authenticateRequest, async (req, res) => {
                 status: status || "PLANNED",
                 startDate: startDate ? new Date(startDate) : undefined,
                 endDate: endDate ? new Date(endDate) : undefined,
+                profile: profile || "PENTEST",
                 type: type || "NETWORK_PENTEST",
                 methodology: methodology || "BLACK_BOX",
                 complianceFrameworks: complianceFrameworks || [],
@@ -163,6 +170,7 @@ router.post("/", authenticateRequest, async (req, res) => {
             endDate: newEngagement.endDate,
             customerId: newEngagement.customerId,
             customer: newEngagement.customer?.name || "Unknown",
+            profile: newEngagement.profile,
             type: newEngagement.type,
             methodology: newEngagement.methodology,
             complianceFrameworks: newEngagement.complianceFrameworks,
@@ -185,10 +193,14 @@ router.put("/:id", authenticateRequest, async (req, res) => {
     const { id } = req.params;
     const { 
         name, description, customerId, status, startDate, endDate,
-        type, methodology, complianceFrameworks, riskTolerance,
+        profile, type, methodology, complianceFrameworks, riskTolerance,
         businessCriticalHours, criticalSystems, previousEngagements,
         budgetHours, maxConcurrentTesters, testingParameters
     } = req.body;
+
+    if (profile !== undefined && !PROFILES.includes(profile)) {
+        return res.status(400).json({ error: `profile must be one of ${PROFILES.join(", ")}` });
+    }
 
     try {
         // Handle testing parameters update separately if provided
@@ -221,6 +233,7 @@ router.put("/:id", authenticateRequest, async (req, res) => {
                 ...(status !== undefined && { status }),
                 ...(startDate !== undefined && { startDate: new Date(startDate) }),
                 ...(endDate !== undefined && { endDate: new Date(endDate) }),
+                ...(profile !== undefined && { profile }),
                 ...(type !== undefined && { type }),
                 ...(methodology !== undefined && { methodology }),
                 ...(complianceFrameworks !== undefined && { complianceFrameworks }),
@@ -249,6 +262,7 @@ router.put("/:id", authenticateRequest, async (req, res) => {
             endDate: updatedEngagement.endDate,
             customerId: updatedEngagement.customerId,
             customer: updatedEngagement.customer?.name || "Unknown",
+            profile: updatedEngagement.profile,
             type: updatedEngagement.type,
             methodology: updatedEngagement.methodology,
             complianceFrameworks: updatedEngagement.complianceFrameworks,
