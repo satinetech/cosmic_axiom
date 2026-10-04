@@ -36,17 +36,24 @@ export class OplogError extends Error {
 const iso = (d) => new Date(d).toISOString();
 const orNull = (v) => (v === undefined ? null : v);
 
+// The canonical form new entries are written in.
+export const CURRENT_FORMAT = 2;
+
 /**
  * The exact bytes an entry's digest covers. A fixed-order array rather than an
- * object, so the result can never depend on key order. The leading tag makes a
- * future change to the format a different, recognisable string.
+ * object, so the result can never depend on key order. The leading tag names
+ * the form: an entry is hashed, and verified, in the form recorded on it.
+ *
+ *   oplog-v1  the original fields
+ *   oplog-v2  v1 plus kind and approvedBy
  */
 export function canonical(entry) {
     const attachments = (entry.attachments || [])
         .map((a) => [a.sha256, orNull(a.label)])
         .sort((a, b) => (a[0] + "\0" + (a[1] ?? "")).localeCompare(b[0] + "\0" + (b[1] ?? "")));
+    const v2 = (entry.format ?? 1) === 2;
     return JSON.stringify([
-        "oplog-v1",
+        v2 ? "oplog-v2" : "oplog-v1",
         entry.engagementId,
         entry.seq,
         iso(entry.occurredAt),
@@ -60,6 +67,7 @@ export function canonical(entry) {
         orNull(entry.targetAddress),
         orNull(entry.scopeVerdict),
         orNull(entry.correctsSeq),
+        ...(v2 ? [entry.kind ?? "ACTION", orNull(entry.approvedBy)] : []),
         attachments,
         entry.prevDigest,
     ]);
@@ -128,6 +136,12 @@ export async function appendEntry(db, input, { now = new Date(), attempts = 5 } 
     if (occurredAt.getTime() > now.getTime() + FUTURE_TOLERANCE_MS) {
         throw new OplogError("occurredAt", "is in the future");
     }
+    const kind = input.kind ?? "ACTION";
+    if (!["ACTION", "DECISION"].includes(kind)) throw new OplogError("kind", "must be ACTION or DECISION");
+    const approvedBy = typeof input.approvedBy === "string" && input.approvedBy.trim() ? input.approvedBy.trim() : null;
+    if (kind === "DECISION" && !approvedBy) {
+        throw new OplogError("approvedBy", "is required for a decision: who authorised it");
+    }
     for (const a of input.attachments || []) {
         if (!/^[0-9a-f]{64}$/.test(a.sha256 ?? "")) throw new OplogError("attachments", `not a sha256: ${a.sha256}`);
     }
@@ -158,6 +172,9 @@ export async function appendEntry(db, input, { now = new Date(), attempts = 5 } 
             targetAddress: orNull(input.targetAddress),
             scopeVerdict: verdict,
             correctsSeq: orNull(input.correctsSeq),
+            kind,
+            approvedBy,
+            format: CURRENT_FORMAT,
             prevDigest: last?.entryDigest ?? GENESIS,
         };
         const attachments = (input.attachments || []).map((a) => ({ sha256: a.sha256, label: orNull(a.label) }));
@@ -194,6 +211,12 @@ export async function verifyChain(db, engagementId, { pageSize = 500 } = {}) {
             const fail = (problem) => ({ ok: false, entries: expectedSeq - 1, seq: entry.seq, problem });
             if (entry.seq !== expectedSeq) return fail(`expected entry ${expectedSeq} next; entries are missing or renumbered`);
             if (entry.prevDigest !== prev) return fail("does not follow the entry before it");
+            const format = entry.format ?? 1;
+            // A v1 digest does not cover kind or approvedBy, and v1 predates
+            // decisions: a v1 entry claiming either was changed afterwards.
+            if (![1, 2].includes(format) || (format === 1 && ((entry.kind ?? "ACTION") !== "ACTION" || entry.approvedBy))) {
+                return fail("has been changed since it was written");
+            }
             if (digest(entry) !== entry.entryDigest) return fail("has been changed since it was written");
             prev = entry.entryDigest;
             expectedSeq += 1;

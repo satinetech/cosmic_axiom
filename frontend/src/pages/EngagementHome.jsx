@@ -97,7 +97,7 @@ function EngagementHome() {
                             ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
                             : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
                     >
-                        {TABS[key].label}
+                        {profile.tabLabels?.[key] ?? TABS[key].label}
                     </button>
                 ))}
             </nav>

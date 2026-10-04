@@ -44,11 +44,11 @@ router.post("/:id/log", authenticateRequest, async (req, res) => {
     const operator = operatorOf(req);
     if (!operator) return res.status(401).json({ error: "The token does not identify a user" });
 
-    const { summary, occurredAt, command, output, tool, targetAddress, correctsSeq, attachments } = req.body ?? {};
+    const { summary, occurredAt, command, output, tool, targetAddress, correctsSeq, attachments, kind, approvedBy } = req.body ?? {};
     try {
         const entry = await appendEntry(prisma, {
             engagementId: req.params.id, operator,
-            summary, occurredAt, command, output, tool, targetAddress, correctsSeq, attachments,
+            summary, occurredAt, command, output, tool, targetAddress, correctsSeq, attachments, kind, approvedBy,
         });
         res.status(201).json(entry);
     } catch (err) {

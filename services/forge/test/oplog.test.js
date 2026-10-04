@@ -49,6 +49,22 @@ describe("canonical form and digest", () => {
     });
 });
 
+describe("format 2: decisions", () => {
+    const v2 = { ...sample, format: 2, kind: "ACTION", approvedBy: null };
+
+    test("covers kind and approvedBy, and differs from v1", () => {
+        assert.equal(JSON.parse(canonical(v2))[0], "oplog-v2");
+        assert.notEqual(digest(v2), digest(sample));
+        assert.notEqual(digest({ ...v2, kind: "DECISION" }), digest(v2));
+        assert.notEqual(digest({ ...v2, approvedBy: "CISO" }), digest(v2));
+    });
+
+    test("v1 is unchanged, so entries written before decisions still verify", () => {
+        assert.equal(JSON.parse(canonical(sample))[0], "oplog-v1");
+        assert.equal(JSON.parse(canonical(sample)).length, 16);
+    });
+});
+
 describe("scope", () => {
     const scopes = [
         { address: "10.0.0.0/24", inScope: true },
@@ -185,6 +201,43 @@ describe("the chain, in MySQL", { skip: url ? false : "TEST_DATABASE_URL not set
     test("an engagement with a log cannot be deleted out from under it", async () => {
         await append({ summary: "a" });
         await assert.rejects(db.engagement.delete({ where: { id: engagement.id } }), (e) => e.code === "P2003");
+    });
+
+    test("a decision needs who approved it, and is written in format 2", async () => {
+        await assert.rejects(append({ summary: "Disable the account", kind: "DECISION" }), (e) => e.field === "approvedBy");
+        await assert.rejects(append({ summary: "x", kind: "VOTE" }), (e) => e.field === "kind");
+        const d = await append({ summary: "Disable jsmith's account", kind: "DECISION", approvedBy: "  Client CISO  " });
+        assert.deepEqual([d.kind, d.approvedBy, d.format], ["DECISION", "Client CISO", 2]);
+        assert.deepEqual(await verifyChain(db, engagement.id), { ok: true, entries: 1 });
+    });
+
+    test("changing a decision, or who approved it, is found", async () => {
+        await append({ summary: "Isolate the host", kind: "DECISION", approvedBy: "IT lead" });
+        await append({ summary: "Isolated FIN-07" });
+        await db.$executeRaw`UPDATE OperatorLogEntry SET approvedBy = 'CEO' WHERE seq = 1`;
+        assert.equal((await verifyChain(db, engagement.id)).seq, 1);
+        await db.$executeRaw`UPDATE OperatorLogEntry SET approvedBy = 'IT lead', kind = 'ACTION' WHERE seq = 1`;
+        assert.equal((await verifyChain(db, engagement.id)).seq, 1);
+    });
+
+    test("an entry from before decisions (format 1) still verifies, and cannot be turned into one", async () => {
+        // Written the way the previous version did: format 1, hashed as oplog-v1.
+        const legacy = {
+            engagementId: engagement.id, seq: 1, occurredAt: now, recordedAt: now, backdated: false, operator: "u1",
+            summary: "Old entry", command: null, output: null, tool: null, targetAddress: null, scopeVerdict: null,
+            correctsSeq: null, prevDigest: GENESIS, format: 1, kind: "ACTION", approvedBy: null,
+        };
+        await db.operatorLogEntry.create({ data: { ...legacy, entryDigest: digest(legacy) } });
+        await append({ summary: "New entry" });
+        assert.deepEqual(await verifyChain(db, engagement.id), { ok: true, entries: 2 });
+        await db.$executeRaw`UPDATE OperatorLogEntry SET kind = 'DECISION', approvedBy = 'Someone' WHERE seq = 1`;
+        assert.equal((await verifyChain(db, engagement.id)).seq, 1);
+    });
+
+    test("relabelling a format 2 entry as format 1 is found", async () => {
+        await append({ summary: "x", kind: "DECISION", approvedBy: "IT lead" });
+        await db.$executeRaw`UPDATE OperatorLogEntry SET format = 1, kind = 'ACTION', approvedBy = NULL WHERE seq = 1`;
+        assert.equal((await verifyChain(db, engagement.id)).ok, false);
     });
 
     test("verifies across pages", async () => {
