@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, FileText, ImagePlus, Loader2, Pencil, Plus, Shield, Target } from "lucide-react";
+import { ArrowLeft, ExternalLink, FileText, ImagePlus, Loader2, Pencil, Plus, Shield, Sparkles, Target } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import ImageManagementModal from "../components/ImageManagementModal";
@@ -6,6 +6,8 @@ import NewEngagementModal from "../components/NewEngagementModal";
 import RecordsTab from "../components/RecordsTab";
 import { RECORD_TYPES } from "../records";
 import ScopeModal from "../components/ScopeModal";
+import AssistantPanel from "../assistant/AssistantPanel";
+import { assistantStatus } from "../assistant/api";
 import { TABS, engagementKindLabel, profileOf } from "../profiles";
 import OperatorLog from "./OperatorLog";
 
@@ -53,6 +55,10 @@ function EngagementHome() {
     const [engagement, setEngagement] = useState(null);
     const [report, setReport] = useState(null);
     const [error, setError] = useState("");
+    const [assistant, setAssistant] = useState({ enabled: false });
+    const [assistantOpen, setAssistantOpen] = useState(false);
+
+    useEffect(() => { assistantStatus().then(setAssistant); }, []);
 
     const load = useCallback(async () => {
         try {
@@ -85,7 +91,13 @@ function EngagementHome() {
                         {customerName(engagement)} · {engagementKindLabel(engagement)} · {engagement.status?.toLowerCase()}
                     </p>
                 </div>
+                {assistant.enabled && (
+                    <button onClick={() => setAssistantOpen((o) => !o)} className={secondary} aria-pressed={assistantOpen}>
+                        <Sparkles size={16} /> Assistant
+                    </button>
+                )}
             </div>
+            <AssistantPanel engagementId={engagementId} open={assistantOpen} onClose={() => setAssistantOpen(false)} />
 
             {/* The border is on a wrapper: drawn on the scrolling strip itself, tabs
                 overlapping it overflow vertically, and browsers with classic
