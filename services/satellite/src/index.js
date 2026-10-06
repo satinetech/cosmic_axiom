@@ -2,6 +2,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import morgan from 'morgan';
+import { aiChatRouter } from './routes/aiChat.js';
 import routes from './routes/index.js';
 import { healthz, installGracefulShutdown } from './utils/lifecycle.js';
 
@@ -11,6 +12,8 @@ const app = express();
 const port = process.env.PORT || 3005;
 
 app.use(cors());
+// Before the JSON parser: it streams its body to nebula unparsed. See aiChat.js.
+app.use('/ai/chat', aiChatRouter());
 app.use(morgan('dev'));
 // Images arrive as base64 inside JSON, so /images needs a far larger body than
 // Express's 100 KB default, which rejects any real screenshot with a 413. Every
