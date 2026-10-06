@@ -9,7 +9,12 @@ import {
     Users
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
+
+// The current section is highlighted. NavLink matches nested paths, so an
+// engagement's pages (/engagements/:id/...) highlight Engagements.
+const navClass = ({ isActive }) =>
+    `flex items-center gap-4 hover:text-indigo-500 ${isActive ? "text-indigo-600 dark:text-indigo-400 font-semibold" : ""}`;
 
 const Sidebar = () => {
     const [collapsed, setCollapsed] = useState(false);
@@ -49,40 +54,40 @@ const Sidebar = () => {
                     </button>
                 </div>
 
-                <Link to="/dashboard" className="flex items-center gap-4 hover:text-indigo-500">
+                <NavLink to="/dashboard" className={navClass}>
                     <LayoutDashboard size={20} />
                     {!collapsed && <span>Dashboard</span>}
-                </Link>
+                </NavLink>
 
-                <Link to="/reports" className="flex items-center gap-4 hover:text-indigo-500">
+                <NavLink to="/reports" className={navClass}>
                     <FileText size={20} />
                     {!collapsed && <span>Reports</span>}
-                </Link>
+                </NavLink>
 
-                <Link to="/roe" className="flex items-center gap-4 hover:text-indigo-500">
+                <NavLink to="/roe" className={navClass}>
                     <Shield size={20} />
                     {!collapsed && <span>Rules of Engagement</span>}
-                </Link>
+                </NavLink>
 
-                <Link to="/findings" className="flex items-center gap-4 hover:text-indigo-500">
+                <NavLink to="/findings" className={navClass}>
                     <Book size={20} />
                     {!collapsed && <span>Findings</span>}
-                </Link>
+                </NavLink>
 
-                <Link to="/engagements" className="flex items-center gap-4 hover:text-indigo-500">
+                <NavLink to="/engagements" className={navClass}>
                     <Users size={20} />
                     {!collapsed && <span>Engagements</span>}
-                </Link>
+                </NavLink>
 
-                <Link to="/customers" className="flex items-center gap-4 hover:text-indigo-500">
+                <NavLink to="/customers" className={navClass}>
                     <Handshake size={20} />
                     {!collapsed && <span>Customers</span>}
-                </Link>
+                </NavLink>
 
-                <Link to="/admin" className="flex items-center gap-4 hover:text-indigo-500">
+                <NavLink to="/admin" className={navClass}>
                     <Settings size={20} />
                     {!collapsed && <span>System Admin</span>}
-                </Link>
+                </NavLink>
             </nav>
 
             {/* Light/Dark Mode Toggle */}
