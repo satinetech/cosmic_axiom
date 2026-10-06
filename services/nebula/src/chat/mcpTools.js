@@ -52,6 +52,16 @@ export function parseServers(raw) {
     });
 }
 
+/**
+ * An MCP tool's input schema as a Messages API input_schema: the same JSON
+ * Schema, without the top-level $schema dialect marker MCP servers include,
+ * which means nothing to the API.
+ */
+export function inputSchema(schema) {
+    const { $schema, ...rest } = schema ?? {};
+    return { type: 'object', ...rest };
+}
+
 /** One MCP result as tool_result text. */
 export function resultText(result) {
     const parts = (result?.content ?? []).map((c) =>
@@ -90,7 +100,7 @@ export async function openToolbox(servers, { authorization, allowWrite = false, 
                 definitions.push({
                     name,
                     description: tool.description ?? tool.title ?? tool.name,
-                    input_schema: tool.inputSchema,
+                    input_schema: inputSchema(tool.inputSchema),
                     // Streamed requests: let inputs arrive as generated. The MCP
                     // server validates arguments against its own schema, so an
                     // input the tolerant parser truncated comes back as an
