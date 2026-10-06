@@ -85,13 +85,17 @@ function EngagementHome() {
                 </div>
             </div>
 
-            <nav className="flex gap-1 border-b border-gray-200 dark:border-gray-700 overflow-x-auto" aria-label="Engagement sections">
+            {/* The border is on a wrapper: drawn on the scrolling strip itself, tabs
+                overlapping it overflow vertically, and browsers with classic
+                scrollbars then show a vertical one beside the tabs. */}
+            <div className="border-b border-gray-200 dark:border-gray-700">
+            <nav className="flex gap-1 overflow-x-auto overflow-y-hidden" aria-label="Engagement sections">
                 {profile.tabs.map((key) => (
                     <button
                         key={key}
                         onClick={() => setSearchParams({ tab: key })}
                         aria-current={tab === key ? "page" : undefined}
-                        className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 -mb-px ${tab === key
+                        className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 ${tab === key
                             ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
                             : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
                     >
@@ -99,6 +103,7 @@ function EngagementHome() {
                     </button>
                 ))}
             </nav>
+            </div>
 
             {tab === "overview" && <OverviewTab engagement={engagement} report={report} onChanged={load} />}
             {tab === "scope" && <ScopeTab engagement={engagement} onChanged={load} />}
