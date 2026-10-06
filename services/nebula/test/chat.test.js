@@ -12,7 +12,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { z } from 'zod';
 
 import { runTurn, MAX_ITERATIONS } from '../src/chat/loop.js';
-import { openToolbox, parseServers, resultText, MAX_RESULT_CHARS } from '../src/chat/mcpTools.js';
+import { inputSchema, openToolbox, parseServers, resultText, MAX_RESULT_CHARS } from '../src/chat/mcpTools.js';
 import { chatRouter, systemPrompt, validMessages } from '../src/chat/route.js';
 
 // ---------------------------------------------------------------------------
@@ -97,6 +97,14 @@ test('resultText: text joined, other content named, long results cut', () => {
     assert.match(resultText({ content: [{ type: 'text', text: 'x'.repeat(MAX_RESULT_CHARS + 5) }] }), /truncated by nebula: 5 more/);
 });
 
+test('inputSchema drops the $schema marker and keeps the rest', () => {
+    assert.deepEqual(
+        inputSchema({ $schema: 'http://json-schema.org/draft-07/schema#', type: 'object', properties: { q: { type: 'string' } } }),
+        { type: 'object', properties: { q: { type: 'string' } } },
+    );
+    assert.deepEqual(inputSchema(undefined), { type: 'object' });
+});
+
 test('validMessages: a conversation ending with the user', () => {
     assert.ok(validMessages(userTurn('hi')));
     assert.ok(!validMessages([]));
@@ -122,6 +130,7 @@ test('openToolbox: read-only tools only, the caller\'s token forwarded, calls ro
         assert.deepEqual(box.definitions.map((d) => d.name), ['case__search']);
         assert.equal(box.definitions[0].eager_input_streaming, true);
         assert.equal(box.definitions[0].input_schema.type, 'object');
+        assert.equal('$schema' in box.definitions[0].input_schema, false);
 
         assert.deepEqual(await box.call('case__search', { q: 'sshd' }), { text: '3 alerts for sshd', isError: false });
         assert.equal((await box.call('case__quarantine', { host: 'x' })).isError, true);
