@@ -111,7 +111,13 @@ export function chatRouter({
         const emit = (event) => res.write(`data: ${JSON.stringify(event)}\n\n`);
 
         const abort = new AbortController();
-        res.on('close', () => abort.abort());
+        // A comment line every 15 s: proxies (nginx's default is 60 s) close a
+        // response that goes quiet, and one slow tool call can be quiet that long.
+        const keepAlive = setInterval(() => res.write(': keep-alive\n\n'), 15_000);
+        res.on('close', () => {
+            clearInterval(keepAlive);
+            abort.abort();
+        });
 
         let toolbox;
         try {
@@ -133,6 +139,7 @@ export function chatRouter({
                 emit({ type: 'error', error: chatError(err) });
             }
         } finally {
+            clearInterval(keepAlive);
             await toolbox?.close();
             res.end();
         }
